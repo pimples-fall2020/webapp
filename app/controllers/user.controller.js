@@ -2,7 +2,8 @@ const db = require("../models");
 // const User = require("../models/user.model.js");
 const User = db.user;
 const Op = db.Sequelize.Op;
-
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 // console.log(db.Sequelize.models);
 // Create and Save a new user
 /*{
@@ -12,6 +13,8 @@ const Op = db.Sequelize.Op;
   "email_address": "jane.doe@example.com"
 }*/
 exports.create = (req, res) => {
+
+  console.log(req.headers);
     // Validate request
     // if (!req.body.title) {
     //   res.status(400).send({
@@ -20,26 +23,44 @@ exports.create = (req, res) => {
     //   return;
     // }
   
-    console.log(db);
+    // console.log(db);
     // Create a Tutorial
-    const user = {
-      first_name: req.body.first_name,
-      last_name: req.body.last_name,
-      password: req.body.password,
-      email_address: req.body.email_address,
-    };
-  
-    // Save Tutorial in the database
-    User.create(user)
-      .then(data => {
-        res.send(data);
-      })
-      .catch(err => {
-        res.status(500).send({
-          message:
-            err.message || "Some error occurred while creating the Tutorial."
-        });
-      });
+
+    bcrypt.hash(req.body.password, saltRounds, (err, hash) => {
+      if (err) {
+          return res.status(500).json({
+              statusCode: '409',
+              message: 'Internal Server Error occurred'             
+          });
+      }
+      else {
+        //TODO: validate password and insert on success
+
+        const user = {
+          first_name: req.body.first_name,
+          last_name: req.body.last_name,
+          password: hash,
+          username: req.body.username,
+        };
+      
+        // Save Tutorial in the database
+        User.create(user)
+          .then(data => {
+            let resp = data.dataValues;
+            delete resp.password;
+            res.send(resp);
+          })
+          .catch(err => {
+            res.status(500).send({
+              message:
+                err.message || "Some error occurred while creating the Tutorial."
+            });
+          });
+
+      }
+
+    });
+    
   };
 
 // // Retrieve all Tutorials from the database.
@@ -155,3 +176,25 @@ exports.create = (req, res) => {
 //       });
 //     });
 // };
+
+function validatePassword(email,suppliedPassword){
+const hash = await User.findAll({
+  where: {
+    username: email
+  }
+});
+  // Load hash from your password DB.
+bcrypt.compare(suppliedPassword, hash, function(err, result) {
+  //TODO: handle error and set result
+  if(err){
+    return false;
+  }else if(result){
+    return true;
+  }else{
+    return false;
+  }
+  
+  // result == true
+});
+
+}
