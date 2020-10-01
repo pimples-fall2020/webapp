@@ -20,9 +20,8 @@ exports.create = (req, res) => {
 
   bcrypt.hash(req.body.password, saltRounds, (err, hash) => {
     if (err) {
-      return res.status(500).json({
-        statusCode: "409",
-        message: "Internal Server Error occurred",
+      return res.status(400).json({
+        message: "Error occurred while password encryption:" + err.message
       });
     } else {
       //TODO: validate password as per NIST and insert on success
@@ -42,9 +41,23 @@ exports.create = (req, res) => {
           res.send(resp);
         })
         .catch((err) => {
-          res.status(500).send({
-            message: err.message || "Some error occurred while creating the Tutorial.",
-          });
+
+          console.log(err.errors[0].message);
+          if (err.errors[0].message == 'username must be unique') {
+            res.status(400).send({
+              message: "Error: The user already exists!",
+            });
+
+          } else if(err.message== 'Validation isEmail on username failed' || err.message.includes('isEmail')) {
+            res.status(400).send({
+              message: "Validation Error: Please enter a valid email ID!"
+            });
+          }
+          else {
+            res.status(400).send({
+              message: "Error:" + err.message,
+            });
+          }
         });
     }
   });
@@ -93,13 +106,14 @@ exports.findSelf = (req, res) => {
                 res.send(data);
               })
               .catch((err) => {
-                res.status(500).send({
-                  message: "error " + err,
-                });
+                if (err.message == " ")
+                  res.status(400).send({
+                    message: "error " + err,
+                  });
               });
           } else {
             //wrong password
-            res.status(401).send({
+            return res.status(401).send({
               message: "Error: Wrong password",
             });
           }
@@ -111,8 +125,8 @@ exports.findSelf = (req, res) => {
         });
     })
     .catch((err) => {
-      res.status(500).send({
-        message: "Error:" + err,
+      res.status(401).send({
+        message: err,
       });
     });
 };
@@ -124,6 +138,14 @@ exports.updateUser = (req, res) => {
   let updateObject = req.body;
   let userEmail = "";
   if ("username" in updateObject) {
+
+    if (updateObject.username != cred.username) {
+      return res.status(400).send({
+        message: "Error: Please specify correct usernames!"
+      });
+      //unreachable code below
+      // throw new Error("Please specify correct usernames!");
+    }
     userEmail = updateObject.username;
     delete updateObject.username;
   } else {
@@ -150,9 +172,11 @@ exports.updateUser = (req, res) => {
               }
             }
             if (notAllowedFields.length > 0) {
-              res.status(400).send({
-                message: "Update Failed: Fields not allowed:  " + notAllowedFields,
-              });
+              // res.status(400).send({
+              //   message: "Update Failed: Fields not allowed:  " + notAllowedFields
+              // });
+              throw new Error("Update Failed: Fields not allowed:  " + notAllowedFields);
+
             }
             console.log("update object");
             console.log(updateObject);
@@ -160,9 +184,10 @@ exports.updateUser = (req, res) => {
             if ("password" in updateObject) {
               bcrypt.hash(req.body.password, saltRounds, (err, hash) => {
                 if (err) {
-                  return res.status(500).json({
-                    message: "Hash encryption failed:" + err,
-                  });
+                  // return res.status(500).json({
+                  //   message: "Hash encryption failed:" + err,
+                  // });
+                  throw new Error("Hash encryption failed:" + err);
                 } else {
                   updateObject.password = hash;
                   //update the user here
@@ -177,28 +202,49 @@ exports.updateUser = (req, res) => {
                       });
                     })
                     .catch((err) => {
-                      res.status(500).send({
+                      res.status(400).send({
                         message: "error " + err,
                       });
                     });
                 }
               });
+            } else {
+              //update body doesn't contain password field:
+
+              //update the user here
+              User.update(updateObject, {
+                  where: {
+                    username: userEmail,
+                  },
+                })
+                .then(() => {
+                  res.status(204).send({
+                    message: "User Updated successfully",
+                  });
+                })
+                .catch((err) => {
+                  res.status(400).send({
+                    message: "error " + err,
+                  });
+                });
+
+
             }
           } else {
             //wrong password
-            res.status(401).send({
+            return res.status(401).send({
               message: "Error: Wrong password",
             });
           }
         })
         .catch((err) => {
-          res.status(500).send({
-            message: "Error occurred:" + err,
+          res.status(400).send({
+            message: err,
           });
         });
     })
     .catch((err) => {
-      res.status(500).send({
+      res.status(400).send({
         message: "Error:" + err,
       });
     });
@@ -277,6 +323,7 @@ async function getHash(email) {
   return hash;
 }
 
+//TODO: Add validation for empty username password
 function getCredentialsFromAuth(authHeader) {
   const b64auth = (authHeader || "").split(" ")[1] || "";
   const strauth = Buffer.from(b64auth, "base64").toString();
