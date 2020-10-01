@@ -1,7 +1,10 @@
 const db = require("../models");
-// const User = require("../models/user.model.js");
 const User = db.user;
 const Op = db.Sequelize.Op;
+
+var passwordValidator = require('password-validator');
+const commonPasswordList = require('fxa-common-password-list');
+
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
 
@@ -18,13 +21,33 @@ const saltRounds = 10;
 exports.create = (req, res) => {
   // console.log(req.headers);
 
-  bcrypt.hash(req.body.password, saltRounds, (err, hash) => {
+  //Validate password
+  var schema = new passwordValidator();
+
+schema
+.is().min(9)                                    // Minimum length 9
+.is().max(150)                                  // Maximum length 150
+.has().uppercase()                              // Must have uppercase letters
+.has().lowercase()                              // Must have lowercase letters
+.has().digits(2)                                // Must have at least 2 digits
+.has().symbols(1)                                
+.has().not().spaces()                           // Should not have spaces
+.is().not().oneOf(['Passw0rd', 'Password123','password','1234567890']); // Blacklist these values
+ let pass = req.body.password;
+if((schema.validate(pass) /*&& !commonPasswordList(pass)*/)==false){
+  //password is invalid
+  return res.status(400).json({
+    message: "Error: Weak / Invalid password.\nPlease use a strong and uncommon password with length more than 8, containing uppercase, lowercase, two digits, a symbol and no spaces"
+  });
+
+}
+
+  bcrypt.hash(pass, saltRounds, (err, hash) => {
     if (err) {
       return res.status(400).json({
         message: "Error occurred while password encryption:" + err.message
       });
-    } else {
-      //TODO: validate password as per NIST and insert on success
+    } else {      
 
       const user = {
         first_name: req.body.first_name,
