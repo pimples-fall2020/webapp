@@ -22,8 +22,10 @@
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
     "express": "^4.17.1",
+    "fxa-common-password-list": "0.0.4",
     "mysql": "^2.18.1",
     "mysql2": "^2.2.5",
+    "password-validator": "^5.1.0",
     "sequelize": "^6.3.5"
   },
   "devDependencies": {
