@@ -2,8 +2,11 @@ const db = require("../models");
 // const User = require("../models/user.model.js");
 const User = db.user;
 const Op = db.Sequelize.Op;
-const bcrypt = require('bcrypt');
+const bcrypt = require("bcrypt");
 const saltRounds = 10;
+
+//TODO: Fix and review all the error codes and error messages below. handle more cases!!! There are always more cases to handle!
+
 // console.log(db.Sequelize.models);
 // Create and Save a new user
 /*{
@@ -13,24 +16,13 @@ const saltRounds = 10;
   "email_address": "jane.doe@example.com"
 }*/
 exports.create = (req, res) => {
-
-  console.log(req.headers);
-  // Validate request
-  // if (!req.body.title) {
-  //   res.status(400).send({
-  //     message: "Content can not be empty!"
-  //   });
-  //   return;
-  // }
-
-  // console.log(db);
-  // Create a Tutorial
+  // console.log(req.headers);
 
   bcrypt.hash(req.body.password, saltRounds, (err, hash) => {
     if (err) {
       return res.status(500).json({
-        statusCode: '409',
-        message: 'Internal Server Error occurred'
+        statusCode: "409",
+        message: "Internal Server Error occurred",
       });
     } else {
       //TODO: validate password as per NIST and insert on success
@@ -44,21 +36,18 @@ exports.create = (req, res) => {
 
       // Save Tutorial in the database
       User.create(user)
-        .then(data => {
+        .then((data) => {
           let resp = data.dataValues;
           delete resp.password;
           res.send(resp);
         })
-        .catch(err => {
+        .catch((err) => {
           res.status(500).send({
-            message: err.message || "Some error occurred while creating the Tutorial."
+            message: err.message || "Some error occurred while creating the Tutorial.",
           });
         });
-
     }
-
   });
-
 };
 
 // // Retrieve all Tutorials from the database.
@@ -82,9 +71,11 @@ exports.create = (req, res) => {
 exports.findSelf = (req, res) => {
   const cred = getCredentialsFromAuth(req.headers.authorization);
 
-  getHash(cred.username).then(hash => {
+  getHash(cred.username)
+    .then((hash) => {
       console.log(hash);
-      bcrypt.compare(cred.password, hash)
+      bcrypt
+        .compare(cred.password, hash)
         .then((result) => {
           // console.log("in then");
           // console.log(result);
@@ -92,78 +83,126 @@ exports.findSelf = (req, res) => {
           if (result == true) {
             User.findOne({
                 where: {
-                  username: cred.username
+                  username: cred.username,
                 },
                 attributes: {
-                  exclude: ['password']
-                }
+                  exclude: ["password"],
+                },
               })
-              .then(data => {
+              .then((data) => {
                 res.send(data);
               })
-              .catch(err => {
+              .catch((err) => {
                 res.status(500).send({
-                  message: "error " + err
+                  message: "error " + err,
                 });
               });
           } else {
             //wrong password
             res.status(401).send({
-              message: "Error: Wrong password"
+              message: "Error: Wrong password",
             });
           }
         })
-        .catch(err => {
+        .catch((err) => {
           res.status(500).send({
-            message: "Error occurred:" + err
+            message: "Error occurred:" + err,
           });
         });
-
     })
-    .catch(err => {
+    .catch((err) => {
       res.status(500).send({
-        message: "Error:" + err
+        message: "Error:" + err,
       });
     });
-
-
-  // Tutorial.findByPk(id)
-  //   .then(data => {
-  //     res.send(data);
-  //   })
-  //   .catch(err => {
-  //     res.status(500).send({
-  //       message: "Error retrieving Tutorial with id=" + id
-  //     });
-  //   });
 };
 
+// Update the user
+exports.updateUser = (req, res) => {
+  const cred = getCredentialsFromAuth(req.headers.authorization);
 
-// // Update a Tutorial by the id in the request
-// exports.update = (req, res) => {
-//   const id = req.params.id;
+  let updateObject = req.body;
+  let userEmail = "";
+  if ("username" in updateObject) {
+    userEmail = updateObject.username;
+    delete updateObject.username;
+  } else {
+    userEmail = cred.username;
+  }
+  getHash(userEmail)
+    .then((hash) => {
+      console.log(hash);
+      bcrypt
+        .compare(cred.password, hash)
+        .then((result) => {
+          // console.log("in then");
+          // console.log(result);
+          console.log("isValid" + result);
+          if (result == true) {
+            let notAllowedFields = [];
+            for (const key in updateObject) {
+              if (
+                key != "first_name" &&
+                key != "last_name" &&
+                key != "password"
+              ) {
+                notAllowedFields.push(key);
+              }
+            }
+            if (notAllowedFields.length > 0) {
+              res.status(400).send({
+                message: "Update Failed: Fields not allowed:  " + notAllowedFields,
+              });
+            }
+            console.log("update object");
+            console.log(updateObject);
 
-//   Tutorial.update(req.body, {
-//     where: { id: id }
-//   })
-//     .then(num => {
-//       if (num == 1) {
-//         res.send({
-//           message: "Tutorial was updated successfully."
-//         });
-//       } else {
-//         res.send({
-//           message: `Cannot update Tutorial with id=${id}. Maybe Tutorial was not found or req.body is empty!`
-//         });
-//       }
-//     })
-//     .catch(err => {
-//       res.status(500).send({
-//         message: "Error updating Tutorial with id=" + id
-//       });
-//     });
-// };
-
+            if ("password" in updateObject) {
+              bcrypt.hash(req.body.password, saltRounds, (err, hash) => {
+                if (err) {
+                  return res.status(500).json({
+                    message: "Hash encryption failed:" + err,
+                  });
+                } else {
+                  updateObject.password = hash;
+                  //update the user here
+                  User.update(updateObject, {
+                      where: {
+                        username: userEmail,
+                      },
+                    })
+                    .then(() => {
+                      res.status(204).send({
+                        message: "User Updated successfully",
+                      });
+                    })
+                    .catch((err) => {
+                      res.status(500).send({
+                        message: "error " + err,
+                      });
+                    });
+                }
+              });
+            }
+          } else {
+            //wrong password
+            res.status(401).send({
+              message: "Error: Wrong password",
+            });
+          }
+        })
+        .catch((err) => {
+          res.status(500).send({
+            message: "Error occurred:" + err,
+          });
+        });
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: "Error:" + err,
+      });
+    });
+};
 
 // // Delete a Tutorial with the specified id in the request
 // exports.delete = (req, res) => {
@@ -224,29 +263,29 @@ exports.findSelf = (req, res) => {
 async function getHash(email) {
   // let hash = null;
   const data = await User.findAll({
-    attributes: ['password'],
+    attributes: ["password"],
     where: {
-      username: email
-    }
+      username: email,
+    },
   });
   // console.log(data);
-  if (data === undefined || data.length == 0) throw new Error("Wrong Username!");
+  if (data === undefined || data.length == 0)
+    throw new Error("Wrong Username!");
 
   const hash = data[0].dataValues.password;
 
   return hash;
-
 }
 
 function getCredentialsFromAuth(authHeader) {
-  const b64auth = (authHeader || '').split(' ')[1] || '';
-  const strauth = Buffer.from(b64auth, 'base64').toString();
-  const splitIndex = strauth.indexOf(':');
+  const b64auth = (authHeader || "").split(" ")[1] || "";
+  const strauth = Buffer.from(b64auth, "base64").toString();
+  const splitIndex = strauth.indexOf(":");
   const login = strauth.substring(0, splitIndex);
   const password = strauth.substring(splitIndex + 1);
   let cred = {
     username: login,
-    password: password
+    password: password,
   };
 
   return cred;
