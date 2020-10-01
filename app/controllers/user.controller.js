@@ -24,41 +24,41 @@ exports.create = (req, res) => {
   //Validate password
   var schema = new passwordValidator();
 
-schema
-.is().min(9)                                    // Minimum length 9
-.is().max(150)                                  // Maximum length 150
-.has().uppercase()                              // Must have uppercase letters
-.has().lowercase()                              // Must have lowercase letters
-.has().digits(2)                                // Must have at least 2 digits
-.has().symbols(1)                                
-.has().not().spaces()                           // Should not have spaces
-.is().not().oneOf(['Passw0rd', 'Password123','password','1234567890']); // Blacklist these values
- 
-//check for empty fields
-if(req.body.first_name==undefined || req.body.first_name == ''
-   || req.body.last_name==undefined || req.body.last_name== ''
-   || req.body.password==undefined || req.body.password==''
-   || req.body.username==undefined || req.body.username==''){
+  schema
+    .is().min(9) // Minimum length 9
+    .is().max(150) // Maximum length 150
+    .has().uppercase() // Must have uppercase letters
+    .has().lowercase() // Must have lowercase letters
+    .has().digits(2) // Must have at least 2 digits
+    .has().symbols(1)
+    .has().not().spaces() // Should not have spaces
+    .is().not().oneOf(['Passw0rd', 'Password123', 'password', '1234567890']); // Blacklist these values
+
+  //check for empty fields
+  if (req.body.first_name == undefined || req.body.first_name == '' ||
+    req.body.last_name == undefined || req.body.last_name == '' ||
+    req.body.password == undefined || req.body.password == '' ||
+    req.body.username == undefined || req.body.username == '') {
     return res.status(400).json({
       message: "Mandatory fields (first name, last name, username, password) cannot be empty!"
     });
-   }
+  }
 
-let pass = req.body.password;
-if((schema.validate(pass) /*&& !commonPasswordList(pass)*/)==false){
-  //password is invalid
-  return res.status(400).json({
-    message: "Error: Weak / Invalid password.\nPlease use a strong and uncommon password with length more than 8, containing uppercase, lowercase, two digits, a symbol and no spaces"
-  });
+  let pass = req.body.password;
+  if ((schema.validate(pass) /*&& !commonPasswordList(pass)*/ ) == false) {
+    //password is invalid
+    return res.status(400).json({
+      message: "Error: Weak / Invalid password.\nPlease use a strong and uncommon password with length more than 8, containing uppercase, lowercase, two digits, a symbol and no spaces"
+    });
 
-}
+  }
 
   bcrypt.hash(pass, saltRounds, (err, hash) => {
     if (err) {
       return res.status(400).json({
         message: "Error occurred while password encryption:" + err.message
       });
-    } else {      
+    } else {
 
       const user = {
         first_name: req.body.first_name,
@@ -72,11 +72,10 @@ if((schema.validate(pass) /*&& !commonPasswordList(pass)*/)==false){
         .then((data) => {
           let resp = data.dataValues;
           delete resp.password;
-          res.status(201).send(
-            {
-              message: "User Created!",
-              data:  resp
-            });
+          res.status(201).send({
+            message: "User Created!",
+            data: resp
+          });
         })
         .catch((err) => {
 
@@ -86,12 +85,11 @@ if((schema.validate(pass) /*&& !commonPasswordList(pass)*/)==false){
               message: "Error: The user already exists!",
             });
 
-          } else if(err.message== 'Validation isEmail on username failed' || err.message.includes('isEmail')) {
+          } else if (err.message == 'Validation isEmail on username failed' || err.message.includes('isEmail')) {
             res.status(400).send({
               message: "Validation Error: Please enter a valid email ID!"
             });
-          }
-          else {
+          } else {
             res.status(400).send({
               message: "Error:" + err.message,
             });
@@ -121,7 +119,12 @@ if((schema.validate(pass) /*&& !commonPasswordList(pass)*/)==false){
 // Find a single Tutorial with an id
 exports.findSelf = (req, res) => {
   const cred = getCredentialsFromAuth(req.headers.authorization);
-
+  if((cred.username==undefined || cred.username=='')
+    || cred.password==undefined || cred.password==''){
+      return res.status(400).send({
+        message: "Error: Auth username, password cannot be empty"
+      });
+    }
   getHash(cred.username)
     .then((hash) => {
       console.log(hash);
@@ -172,7 +175,12 @@ exports.findSelf = (req, res) => {
 // Update the user
 exports.updateUser = (req, res) => {
   const cred = getCredentialsFromAuth(req.headers.authorization);
-
+  if((cred.username==undefined || cred.username=='')
+  || cred.password==undefined || cred.password==''){
+    return res.status(400).send({
+      message: "Error: Auth username, password cannot be empty"
+    });
+  }
   let updateObject = req.body;
   let userEmail = "";
   if ("username" in updateObject) {
@@ -287,62 +295,6 @@ exports.updateUser = (req, res) => {
       });
     });
 };
-
-// // Delete a Tutorial with the specified id in the request
-// exports.delete = (req, res) => {
-//   const id = req.params.id;
-
-//   Tutorial.destroy({
-//     where: { id: id }
-//   })
-//     .then(num => {
-//       if (num == 1) {
-//         res.send({
-//           message: "Tutorial was deleted successfully!"
-//         });
-//       } else {
-//         res.send({
-//           message: `Cannot delete Tutorial with id=${id}. Maybe Tutorial was not found!`
-//         });
-//       }
-//     })
-//     .catch(err => {
-//       res.status(500).send({
-//         message: "Could not delete Tutorial with id=" + id
-//       });
-//     });
-// };
-
-// // Delete all Tutorials from the database.
-// exports.deleteAll = (req, res) => {
-//   Tutorial.destroy({
-//     where: {},
-//     truncate: false
-//   })
-//     .then(nums => {
-//       res.send({ message: `${nums} Tutorials were deleted successfully!` });
-//     })
-//     .catch(err => {
-//       res.status(500).send({
-//         message:
-//           err.message || "Some error occurred while removing all tutorials."
-//       });
-//     });
-// };
-
-// // Find all published Tutorials
-// exports.findAllPublished = (req, res) => {
-//   Tutorial.findAll({ where: { published: true } })
-//     .then(data => {
-//       res.send(data);
-//     })
-//     .catch(err => {
-//       res.status(500).send({
-//         message:
-//           err.message || "Some error occurred while retrieving tutorials."
-//       });
-//     });
-// };
 
 async function getHash(email) {
   // let hash = null;
