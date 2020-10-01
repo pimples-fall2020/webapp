@@ -32,7 +32,7 @@ exports.create = (req, res) => {
     .has().digits(2) // Must have at least 2 digits
     .has().symbols(1)
     .has().not().spaces() // Should not have spaces
-    .is().not().oneOf(['Passw0rd', 'Password123', 'password', '1234567890']); // Blacklist these values
+    .is().not().oneOf(['Passw0rd', 'Password123', 'password', '1234567890', 'Password123@']); // Blacklist these values
 
   //check for empty fields
   if (req.body.first_name == undefined || req.body.first_name == '' ||
@@ -313,7 +313,6 @@ async function getHash(email) {
   return hash;
 }
 
-//TODO: Add validation for empty username password
 function getCredentialsFromAuth(authHeader) {
   const b64auth = (authHeader || "").split(" ")[1] || "";
   const strauth = Buffer.from(b64auth, "base64").toString();
