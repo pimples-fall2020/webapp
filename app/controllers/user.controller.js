@@ -33,7 +33,18 @@ schema
 .has().symbols(1)                                
 .has().not().spaces()                           // Should not have spaces
 .is().not().oneOf(['Passw0rd', 'Password123','password','1234567890']); // Blacklist these values
- let pass = req.body.password;
+ 
+//check for empty fields
+if(req.body.first_name==undefined || req.body.first_name == ''
+   || req.body.last_name==undefined || req.body.last_name== ''
+   || req.body.password==undefined || req.body.password==''
+   || req.body.username==undefined || req.body.username==''){
+    return res.status(400).json({
+      message: "Mandatory fields (first name, last name, username, password) cannot be empty!"
+    });
+   }
+
+let pass = req.body.password;
 if((schema.validate(pass) /*&& !commonPasswordList(pass)*/)==false){
   //password is invalid
   return res.status(400).json({
@@ -61,7 +72,11 @@ if((schema.validate(pass) /*&& !commonPasswordList(pass)*/)==false){
         .then((data) => {
           let resp = data.dataValues;
           delete resp.password;
-          res.send(resp);
+          res.status(201).send(
+            {
+              message: "User Created!",
+              data:  resp
+            });
         })
         .catch((err) => {
 
