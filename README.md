@@ -1,4 +1,4 @@
-# CSYE 6225 Back-end application in NodeJS using express.js 
+# CSYE 6225 Back-end application in NodeJS using Express.js 
 ## Overview:
 💻 This is a project for the course CSYE 6225. It is a NodeJs app with API endpoints as specified below in this document.
 - **Framework**: Express.js
