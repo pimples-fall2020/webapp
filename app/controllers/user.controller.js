@@ -10,50 +10,38 @@ const saltRounds = 10;
 
 //TODO: Fix and review all the error codes and error messages below. handle more cases!!! There are always more cases to handle!
 
-// console.log(db.Sequelize.models);
-// Create and Save a new user
-/*{
-  "first_name": "Jane",
-  "last_name": "Doe",
-  "password": "skdjfhskdfjhg",
-  "email_address": "jane.doe@example.com"
-}*/
+
+// --------------------------------------Create and Save a new user---------------------------------------------
+
+/**
+ * Create and Save a new user
+ * @param {JSON} req 
+ * {
+ *   "first_name": "Jane",
+ *    "last_name": "Doe",
+ *    "password": "skdjfhskdfjhg",
+ *    "email_address": "jane.doe@example.com"
+ *  }
+ * @param {JSON} res 
+ */
 exports.create = (req, res) => {
-  // console.log(req.headers);
 
-  //Validate password
-  var schema = new passwordValidator();
+ 
 
-  schema
-    .is().min(9) // Minimum length 9
-    .is().max(150) // Maximum length 150
-    .has().uppercase() // Must have uppercase letters
-    .has().lowercase() // Must have lowercase letters
-    .has().digits(2) // Must have at least 2 digits
-    .has().symbols(1)
-    .has().not().spaces() // Should not have spaces
-    .is().not().oneOf(['Passw0rd', 'Password123', 'password', '1234567890', 'Password123@']); // Blacklist these values
 
-  //check for empty fields
-  if (req.body.first_name == undefined || req.body.first_name == '' ||
-    req.body.last_name == undefined || req.body.last_name == '' ||
-    req.body.password == undefined || req.body.password == '' ||
-    req.body.username == undefined || req.body.username == '') {
+  try {
+    //validates user fields and password pattern
+    validateUserRequestFull(req.body, true);
+
+  } catch (error) {
+
     return res.status(400).json({
-      message: "Mandatory fields (first name, last name, username, password) cannot be empty!"
+      message: error.toString()
     });
   }
 
   let pass = req.body.password;
-  if ((schema.validate(pass) /*&& !commonPasswordList(pass)*/ ) == false) {
-    //password is invalid
-    return res.status(400).json({
-      message: "Error: Weak / Invalid password.\nPlease use a strong and uncommon password with length more than 8, containing uppercase, lowercase, two digits, a symbol and no spaces"
-    });
-
-  }
-
-  bcrypt.hash(pass, saltRounds, (err, hash) => {
+  bcrypt.hash(pass, saltRounds, (err, hash) => { //hash the password
     if (err) {
       return res.status(400).json({
         message: "Error occurred while password encryption:" + err.message
@@ -99,32 +87,34 @@ exports.create = (req, res) => {
   });
 };
 
-// // Retrieve all Tutorials from the database.
-// exports.findAll = (req, res) => {
-//     const title = req.query.title;
-//     var condition = title ? { title: { [Op.like]: `%${title}%` } } : null;
 
-//     Tutorial.findAll({ where: condition })
-//       .then(data => {
-//         res.send(data);
-//       })
-//       .catch(err => {
-//         res.status(500).send({
-//           message:
-//             err.message || "Some error occurred while retrieving tutorials."
-//         });
-//       });
-//   };
-
-// Find a single Tutorial with an id
+// ----------------------------------------GET self user data---------------------------------------------------
+/**
+ * GET self user data
+ * @param {JSON} req 
+ * @param {JSON} res 
+ */
 exports.findSelf = (req, res) => {
+
+      //--------check for empty table--------
+  isTableNotEmpty(User).then(()=>{
+    //nothing
+  }).catch((err)=>{
+    res.status(400).send({
+      message: err.toString()
+    });
+  }) 
   const cred = getCredentialsFromAuth(req.headers.authorization);
-  if((cred.username==undefined || cred.username=='')
-    || cred.password==undefined || cred.password==''){
-      return res.status(400).send({
-        message: "Error: Auth username, password cannot be empty"
-      });
-    }
+
+  
+  try {
+    //-----------check if credentials are empty    
+    validateBasicAuth(cred);
+  } catch (error) {
+    return res.status(400).send({
+      message: error.toString()
+    });
+  }
   getHash(cred.username)
     .then((hash) => {
       console.log(hash);
@@ -146,10 +136,9 @@ exports.findSelf = (req, res) => {
               .then((data) => {
                 res.send(data);
               })
-              .catch((err) => {
-                if (err.message == " ")
+              .catch((err) => {                
                   res.status(400).send({
-                    message: "error " + err,
+                    message: err.toString(),
                   });
               });
           } else {
@@ -160,28 +149,52 @@ exports.findSelf = (req, res) => {
           }
         })
         .catch((err) => {
-          res.status(500).send({
+          res.status(400).send({
             message: "Error occurred:" + err,
           });
         });
     })
     .catch((err) => {
       res.status(401).send({
-        message: err,
+        message: err.toString(),
       });
     });
 };
 
-// Update the user
-exports.updateUser = (req, res) => {
+//---------------------------------------------------------- Update the user------------------------------------------------
+
+exports.updateUserPut = (req, res) => {
+
+      //--------check for empty table--------
+      isTableNotEmpty(User).then(()=>{
+        //nothing
+      }).catch((err)=>{
+        res.status(400).send({
+          message: err.toString()
+        });
+      }) 
+
   const cred = getCredentialsFromAuth(req.headers.authorization);
-  if((cred.username==undefined || cred.username=='')
-  || cred.password==undefined || cred.password==''){
+  try {
+    validateBasicAuth(cred);
+  } catch (error) {
     return res.status(400).send({
-      message: "Error: Auth username, password cannot be empty"
+      message: error.toString()
     });
   }
   let updateObject = req.body;
+
+  try {
+    //validates user fields and password pattern
+    validateUserRequestFull(updateObject, true);
+
+  } catch (error) {
+
+    return res.status(400).json({
+      message: error.toString()
+    });
+  }
+
   let userEmail = "";
   if ("username" in updateObject) {
 
@@ -203,8 +216,7 @@ exports.updateUser = (req, res) => {
       bcrypt
         .compare(cred.password, hash)
         .then((result) => {
-          // console.log("in then");
-          // console.log(result);
+
           console.log("isValid" + result);
           if (result == true) {
             let notAllowedFields = [];
@@ -218,9 +230,7 @@ exports.updateUser = (req, res) => {
               }
             }
             if (notAllowedFields.length > 0) {
-              // res.status(400).send({
-              //   message: "Update Failed: Fields not allowed:  " + notAllowedFields
-              // });
+        
               throw new Error("Update Failed: Fields not allowed:  " + notAllowedFields);
 
             }
@@ -239,17 +249,17 @@ exports.updateUser = (req, res) => {
                   //update the user here
                   User.update(updateObject, {
                       where: {
-                        username: userEmail,
+                        username: userEmail
                       },
                     })
                     .then(() => {
                       res.status(204).send({
-                        message: "User Updated successfully",
+                        message: "User Updated successfully"
                       });
                     })
                     .catch((err) => {
                       res.status(400).send({
-                        message: "error " + err,
+                        message: err.toString()
                       });
                     });
                 }
@@ -260,17 +270,17 @@ exports.updateUser = (req, res) => {
               //update the user here
               User.update(updateObject, {
                   where: {
-                    username: userEmail,
+                    username: userEmail
                   },
                 })
                 .then(() => {
                   res.status(204).send({
-                    message: "User Updated successfully",
+                    message: "User Updated successfully"
                   });
                 })
                 .catch((err) => {
                   res.status(400).send({
-                    message: "error " + err,
+                    message: err.toString()
                   });
                 });
 
@@ -279,19 +289,19 @@ exports.updateUser = (req, res) => {
           } else {
             //wrong password
             return res.status(401).send({
-              message: "Error: Wrong password",
+              message: "Error: Wrong password"
             });
           }
         })
         .catch((err) => {
           res.status(400).send({
-            message: err,
+            message: err.toString()
           });
         });
     })
     .catch((err) => {
       res.status(400).send({
-        message: "Error:" + err,
+        message: err.toString()
       });
     });
 };
@@ -305,8 +315,10 @@ async function getHash(email) {
     },
   });
   // console.log(data);
-  if (data === undefined || data.length == 0)
+  if (data === undefined || data.length == 0){
+    console.log(data);
     throw new Error("Wrong Username!");
+  }
 
   const hash = data[0].dataValues.password;
 
@@ -325,4 +337,95 @@ function getCredentialsFromAuth(authHeader) {
   };
 
   return cred;
+}
+
+/**
+ * This method is mostly for validating user body while inserting or updating a user entry, since both need all the fields. 
+ * This method validates password pattern too! No need to do it separately
+ * This method can be changed if all methods are required or not by adding a flag
+ * @param {json} user user request body
+ * @param {boolean} allFieldsRequired Whether all fields are strictly required. Defaults to false
+ */
+function validateUserRequestFull(user, allFieldsRequired=false){
+
+  if(allFieldsRequired==true){
+
+    //check for empty fields
+    if (user.first_name == undefined || user.first_name == '' ||
+      user.last_name == undefined || user.last_name == '' ||
+      user.password == undefined || user.password == '' ||
+      user.username == undefined || user.username == '') {
+  
+        throw new Error("Mandatory fields (first name, last name, username, password) cannot be empty!");
+    }
+
+  }
+
+  // this try-catch might be nested into caller of this method
+  try {
+    validatePasswordPattern(user.password);
+  } catch (error) {
+    throw error;
+  }
+}
+
+
+/**
+ * Check password pattern 
+ * 
+ * NOTE: This method does not check the correctness of the password by comparing hash. 
+ * @see bcryot.compare()
+ * 
+ * @param {string} password
+ */
+function validatePasswordPattern(password){
+ //Validate password
+ var schema = new passwordValidator();
+console.log("checking password pattern for "+password+"......");
+ schema
+   .is().min(9) // Minimum length 9
+   .is().max(150) // Maximum length 150
+   .has().uppercase() // Must have uppercase letters
+   .has().lowercase() // Must have lowercase letters
+   .has().digits(2) // Must have at least 2 digits
+   .has().symbols(1)
+   .has().not().spaces() // Should not have spaces
+   .is().not().oneOf(['Passw0rd', 'Password123', 'password', '1234567890', 'Password123@']); // Blacklist these values
+
+
+   console.log(schema.validate(password));
+   if ((schema.validate(password) /*&& !commonPasswordList(pass)*/ ) == false) {
+    //password is invalid
+
+    throw new Error("Weak / Invalid password. Please use a strong and uncommon password with length more than 8, containing uppercase, lowercase, two digits, a symbol and no spaces");
+    
+  }
+
+}
+
+/**
+ * this function currently only checks for empty auth credentials
+ *
+ * @param {obj} cred
+ */
+function validateBasicAuth(cred){
+
+    if((cred.username==undefined || cred.username=='')
+    || cred.password==undefined || cred.password==''){
+      
+       throw new Error( "Auth username, password cannot be empty");
+      
+    }
+}
+
+/**
+ * Check if supplied table is empty
+ *
+ * @param {*} Model Table/model
+ */
+async function isTableNotEmpty(Model){
+  const data = await Model.findAll();
+    if(data==undefined || data.length==0){
+      throw new Error("The table is empty!");
+    }
 }
