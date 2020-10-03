@@ -14,7 +14,7 @@ module.exports = app => {
   
     // // Retrieve a single user 
     router.get("/self", userController.findSelf);
-    router.put("/self", userController.updateUser);
+    router.put("/self", userController.updateUserPut);
     // // Update a user with id
     // router.put("/:id", users.update);
   
