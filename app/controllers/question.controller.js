@@ -1,30 +1,107 @@
 const db = require("../models");
 const Question = db.question;
+const User = db.user;
 const auth = require('../utils/auth');
-
+var payloadChecker = require('payload-validator');
+var currentUserId;
+var currentUser;
 exports.create = (req, res) => {
 
+    const expectedPayload = {
+        "question_text": "What is the meaning of life?"
+        // "categories": [
+        //   {
+        // "category": "java"
+        //   }
+        // ]
+    };
     console.log("Create ques")
     auth.authenticateCredentials(req.headers.authorization)
-        .then((result) => {
-            if (result == true) {
+        .then((resultObj) => {
+            if (resultObj.auth != undefined && resultObj.auth == true) {
                 //All good, authenticated!
-                console.log(result + " Authenticated!")
-                res.send("ok");
+                console.log(resultObj + " Authenticated!");
+                currentUserId = resultObj.cred.username;
+                //validate req body
+                var isBodyValid = payloadChecker.validator(req.body, expectedPayload, ["question_text" /*,"key2"*/ ], true);
+                // Look for result.success key which will be true or false depending upon validation.
+                // if false look for result.response.errorMessage key to know more about the validator error.
+
+                if (isBodyValid.success == true) {
+
+                    console.log("userid---" + currentUserId);
+                    fetchCurrentUser(currentUserId).then((user) => {
+                        console.log(user);
+                        let ques = req.body;
+                        ques.user_id = user.id;
+                        //insertion
+                        Question.create(ques)
+                            .then((data) => {
+                                //Inserted
+                                console.log(data.dataValues);
+                                res.status(201).send(data.dataValues);
+                            })
+                            .catch(err => {
+                                console.log(err);
+                                res.status(400).send({
+                                    message: err.toString()
+                                });
+                            })
+
+
+                    }).catch(err => {
+                        res.status(400).send({
+                            message: "Error: Error while fetching user for associating with question"
+                        });
+                    });
+
+                } else {
+                    // return res.status(400).send({
+                    throw new Error(isBodyValid.response.errorMessage);
+                    // });
+                }
+
+
             } else {
-                res.status(400).send({
-                    message: "Error: Please check the credentials"
-                });
+                // return res.status(400).send({
+                throw new Error("Error: Please check the credentials");
+                // });
             }
         })
         .catch((err) => {
-            console.log("Problem while authenticating" + err);
-            res.status(400).send({
-                message: err.toString()
-            });
+            console.log("error---" + err);
+            if (err.toString().includes("username") ||
+                err.toString().includes("Username") ||
+                err.toString().includes("password") ||
+                err.toString().includes("Password") ||
+                err.toString().includes("credentials") ||
+                err.toString().includes("user") ||
+                err.toString().includes("Auth")) {
+                res.status(401).send({
+                    message: err.toString()
+                });
+            } else {
+                res.status(400).send({
+                    message: err.toString()
+                });
+
+            }
         });
 }
 
 exports.deleteQuestion = (req, res) => {}
 
 exports.updateQuestionPut = (req, res) => {}
+
+async function fetchCurrentUser(userName) {
+    // let currUser;
+    let currUser = await User.findOne({
+        where: {
+            username: userName
+        }
+    });
+    if (currUser != undefined && currUser != null) {
+        return currUser.dataValues;
+    }
+
+}

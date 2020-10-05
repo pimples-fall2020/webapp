@@ -13,7 +13,7 @@ function validateBasicAuth(cred) {
     if ((cred.username == undefined || cred.username == '') ||
         cred.password == undefined || cred.password == '') {
 
-        throw new Error("Auth username, password cannot be empty");
+        throw new Error("Auth: username, password cannot be empty");
 
     }
 }
@@ -31,7 +31,7 @@ async function getHash(cred) {
         // console.log(data);
         if (data === undefined || data.length == 0) {
             console.log(data);
-            throw new Error("Wrong Username!");
+            throw new Error("Auth: Wrong Username!");
         }
 
         const passHash = data[0].dataValues.password;
@@ -78,9 +78,13 @@ module.exports = {
                 console.log("isValid" + result);
                 // console.log(typeof result);
                 if (result === true) {
-                    return result;
+                    let resultObj = {
+                        cred: cred,
+                        auth: result
+                    };
+                    return resultObj;
                 } else {
-                    throw new Error("Wrong password!");
+                    throw new Error("Auth: Wrong password!");
                 }
             } catch (err) {
                 // console.log("common catch!" + err);

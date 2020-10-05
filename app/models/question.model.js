@@ -1,13 +1,11 @@
 const dbConfig = require("../config/db.config.js");
 
-const {
-    Sequelize,
-    Op,
-    Model,
-    DataTypes
-} = require("sequelize");
-
-const User = require('./user.model');
+// const {
+//     Sequelize,
+//     Op,
+//     Model,
+//     DataTypes
+// } = require("sequelize");
 
 module.exports = (sequelize, Sequelize) => {
     const Question = sequelize.define("question", {
@@ -30,13 +28,8 @@ module.exports = (sequelize, Sequelize) => {
         //model options above this only
 
     });
+
+return Question;
 }
-
-//---Associations-------------
-
-User.hasMany(Question, {
-    foreignKey: 'user_id'
-});
-Question.belongsTo(User);
 
 //Question and categories have many-to-many relationships defined in junctionModels.js
