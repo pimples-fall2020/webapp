@@ -117,14 +117,33 @@ function getCredentialsFromAuth(authHeader) {
 
 //------------------Usage-------------------------------
 // auth.authenticateCredentials(req.headers.authorization)
-// .then(result => {
-//     if(result==true){
-//         //All good, authenticated!
-//     }
-// })
-// .catch((err) => {
-//     console.log("Problem while authenticating" + err);
-//     res.status(400).send({
-//         message: err.toString()
-//       });
-// });
+//         .then((resultObj) => {
+//             if (resultObj.auth != undefined && resultObj.auth == true) {
+//                 //All good, authenticated!
+//                 console.log(resultObj + " Authenticated!");
+                
+//             } else {
+//                 // return res.status(400).send({
+//                 throw new Error("Error: Please check the credentials");
+//                 // });
+//             }
+//         })
+//         .catch((err) => {
+//             console.log("error---" + err);
+//             if (err.toString().includes("username") ||
+//                 err.toString().includes("Username") ||
+//                 err.toString().includes("password") ||
+//                 err.toString().includes("Password") ||
+//                 err.toString().includes("credentials") ||
+//                 err.toString().includes("user") ||
+//                 err.toString().includes("Auth")) {
+//                 res.status(401).send({
+//                     message: err.toString()
+//                 });
+//             } else {
+//                 res.status(400).send({
+//                     message: err.toString()
+//                 });
+
+//             }
+//         });
