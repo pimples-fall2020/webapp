@@ -19,6 +19,17 @@ const db = {};
 db.Sequelize = Sequelize;
 db.sequelize = sequelize;
 
-db.user = require("./user.model.js")(sequelize, Sequelize);;
+db.user = require("./user.model.js")(sequelize, Sequelize);
+db.question = require("./question.model.js")(sequelize, Sequelize);
+
+//--------Associations-----------
+const User = db.user;
+const Question = db.question;
+User.hasMany(Question, {
+    foreignKey: 'user_id'
+});
+Question.belongsTo(User, {
+  foreignKey: 'user_id'
+});
 
 module.exports = db;

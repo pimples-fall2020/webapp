@@ -26,7 +26,7 @@ const saltRounds = 10;
  */
 exports.create = (req, res) => {
 
- 
+
 
 
   try {
@@ -96,17 +96,17 @@ exports.create = (req, res) => {
  */
 exports.findSelf = (req, res) => {
 
-      //--------check for empty table--------
-  isTableNotEmpty(User).then(()=>{
+  //--------check for empty table--------
+  isTableNotEmpty(User).then(() => {
     //nothing
-  }).catch((err)=>{
+  }).catch((err) => {
     res.status(400).send({
       message: err.toString()
     });
-  }) 
+  })
   const cred = getCredentialsFromAuth(req.headers.authorization);
 
-  
+
   try {
     //-----------check if credentials are empty    
     validateBasicAuth(cred);
@@ -136,10 +136,10 @@ exports.findSelf = (req, res) => {
               .then((data) => {
                 res.send(data);
               })
-              .catch((err) => {                
-                  res.status(400).send({
-                    message: err.toString(),
-                  });
+              .catch((err) => {
+                res.status(400).send({
+                  message: err.toString(),
+                });
               });
           } else {
             //wrong password
@@ -165,14 +165,14 @@ exports.findSelf = (req, res) => {
 
 exports.updateUserPut = (req, res) => {
 
-      //--------check for empty table--------
-      isTableNotEmpty(User).then(()=>{
-        //nothing
-      }).catch((err)=>{
-        res.status(400).send({
-          message: err.toString()
-        });
-      }) 
+  //--------check for empty table--------
+  isTableNotEmpty(User).then(() => {
+    //nothing
+  }).catch((err) => {
+    res.status(400).send({
+      message: err.toString()
+    });
+  })
 
   const cred = getCredentialsFromAuth(req.headers.authorization);
   try {
@@ -230,7 +230,7 @@ exports.updateUserPut = (req, res) => {
               }
             }
             if (notAllowedFields.length > 0) {
-        
+
               throw new Error("Update Failed: Fields not allowed:  " + notAllowedFields);
 
             }
@@ -315,7 +315,7 @@ async function getHash(email) {
     },
   });
   // console.log(data);
-  if (data === undefined || data.length == 0){
+  if (data === undefined || data.length == 0) {
     console.log(data);
     throw new Error("Wrong Username!");
   }
@@ -346,17 +346,17 @@ function getCredentialsFromAuth(authHeader) {
  * @param {json} user user request body
  * @param {boolean} allFieldsRequired Whether all fields are strictly required. Defaults to false
  */
-function validateUserRequestFull(user, allFieldsRequired=false){
+function validateUserRequestFull(user, allFieldsRequired = false) {
 
-  if(allFieldsRequired==true){
+  if (allFieldsRequired == true) {
 
     //check for empty fields
     if (user.first_name == undefined || user.first_name == '' ||
       user.last_name == undefined || user.last_name == '' ||
       user.password == undefined || user.password == '' ||
       user.username == undefined || user.username == '') {
-  
-        throw new Error("Mandatory fields (first name, last name, username, password) cannot be empty!");
+
+      throw new Error("Mandatory fields (first name, last name, username, password) cannot be empty!");
     }
 
   }
@@ -378,27 +378,27 @@ function validateUserRequestFull(user, allFieldsRequired=false){
  * 
  * @param {string} password
  */
-function validatePasswordPattern(password){
- //Validate password
- var schema = new passwordValidator();
-console.log("checking password pattern for "+password+"......");
- schema
-   .is().min(9) // Minimum length 9
-   .is().max(150) // Maximum length 150
-   .has().uppercase() // Must have uppercase letters
-   .has().lowercase() // Must have lowercase letters
-   .has().digits(2) // Must have at least 2 digits
-   .has().symbols(1)
-   .has().not().spaces() // Should not have spaces
-   .is().not().oneOf(['Passw0rd', 'Password123', 'password', '1234567890', 'Password123@']); // Blacklist these values
+function validatePasswordPattern(password) {
+  //Validate password
+  var schema = new passwordValidator();
+  console.log("checking password pattern for " + password + "......");
+  schema
+    .is().min(9) // Minimum length 9
+    .is().max(150) // Maximum length 150
+    .has().uppercase() // Must have uppercase letters
+    .has().lowercase() // Must have lowercase letters
+    .has().digits(2) // Must have at least 2 digits
+    .has().symbols(1)
+    .has().not().spaces() // Should not have spaces
+    .is().not().oneOf(['Passw0rd', 'Password123', 'password', '1234567890', 'Password123@']); // Blacklist these values
 
 
-   console.log(schema.validate(password));
-   if ((schema.validate(password) /*&& !commonPasswordList(pass)*/ ) == false) {
+  console.log(schema.validate(password));
+  if ((schema.validate(password) /*&& !commonPasswordList(pass)*/ ) == false) {
     //password is invalid
 
     throw new Error("Weak / Invalid password. Please use a strong and uncommon password with length more than 8, containing uppercase, lowercase, two digits, a symbol and no spaces");
-    
+
   }
 
 }
@@ -408,14 +408,14 @@ console.log("checking password pattern for "+password+"......");
  *
  * @param {obj} cred
  */
-function validateBasicAuth(cred){
+function validateBasicAuth(cred) {
 
-    if((cred.username==undefined || cred.username=='')
-    || cred.password==undefined || cred.password==''){
-      
-       throw new Error( "Auth username, password cannot be empty");
-      
-    }
+  if ((cred.username == undefined || cred.username == '') ||
+    cred.password == undefined || cred.password == '') {
+
+    throw new Error("Auth username, password cannot be empty");
+
+  }
 }
 
 /**
@@ -423,9 +423,9 @@ function validateBasicAuth(cred){
  *
  * @param {*} Model Table/model
  */
-async function isTableNotEmpty(Model){
+async function isTableNotEmpty(Model) {
   const data = await Model.findAll();
-    if(data==undefined || data.length==0){
-      throw new Error("The table is empty!");
-    }
+  if (data == undefined || data.length == 0) {
+    throw new Error("The table is empty!");
+  }
 }
