@@ -99,32 +99,32 @@ exports.deleteQuestion = (req, res) => {
                 //All good, authenticated! let's delete this!
                 console.log(resultObj + " Authenticated!");
                 Question.destroy({
-                    where:{
-                        question_id: qid
-                    }
-                }).then(num=> {
-                    console.log(num);
-                    if(num==1){
-                        //success
-                        res.status(204).send();
-                    }else{
-                        //could not delete. maybe question not found
-                        throw new Error(`Could not delete the question with id=${qid}. The question was not found`);
-                    }
-                })
-                .catch(err=>{
-                    console.log(err);
-                    if(err.toString().includes('not found')){
-                        res.status(404).send({
-                            message: err.toString()
-                        });
-                    }else{
-                        res.status(400).send({
-                            message: err.toString()
-                        });
-                    }
-                });
-                
+                        where: {
+                            question_id: qid
+                        }
+                    }).then(num => {
+                        console.log(num);
+                        if (num == 1) {
+                            //success
+                            res.status(204).send();
+                        } else {
+                            //could not delete. maybe question not found
+                            throw new Error(`Could not delete the question with id=${qid}. The question was not found`);
+                        }
+                    })
+                    .catch(err => {
+                        console.log(err);
+                        if (err.toString().includes('not found')) {
+                            res.status(404).send({
+                                message: err.toString()
+                            });
+                        } else {
+                            res.status(400).send({
+                                message: err.toString()
+                            });
+                        }
+                    });
+
             } else {
                 // return res.status(400).send({
                 throw new Error("Error: Please check the credentials");
@@ -151,8 +151,74 @@ exports.deleteQuestion = (req, res) => {
             }
         });
 }
+//---------update a question---------------------
+exports.updateQuestionPut = (req, res) => {
+    let qid = req.params.question_id;
+    auth.authenticateCredentials(req.headers.authorization)
+        .then((resultObj) => {
+            if (resultObj.auth != undefined && resultObj.auth == true) {
+                //All good, authenticated! let's update
+                console.log(resultObj + " Authenticated!");
+                if (req.body.question_text != undefined) {
+                    let updateObject = {
+                        question_text: req.body.question_text
+                    }
+                    //TODO: Add conditions for mandatory fields and no extra fields -- 400 bad request
+                    Question.update(updateObject, {
+                        where: {
+                            question_id: qid
+                        }
+                    }).then((num) => {
+                        console.log(num);
+                        if (num == 1) {
+                            //updated successfully
+                            res.status(204).send();
+                        } else {
+                            //could not delete. maybe question not found
+                            throw new Error(`Could not update the question with id=${qid}. The question was not found`);
+                        }
 
-exports.updateQuestionPut = (req, res) => {}
+                    }).catch(err => {
+                        console.log(err);
+                        if (err.toString().includes('not found')) {
+                            res.status(404).send({
+                                message: err.toString()
+                            });
+                        } else {
+                            res.status(400).send({
+                                message: err.toString()
+                            });
+                        }
+                    });
+                } else {
+                    throw new Error("question_text field is mandatory in the request!")
+                }
+            } else {
+                // return res.status(400).send({
+                throw new Error("Error: Please check the credentials");
+                // });
+            }
+        })
+        .catch((err) => {
+            console.log("error---" + err);
+            if (err.toString().includes("username") ||
+                err.toString().includes("Username") ||
+                err.toString().includes("password") ||
+                err.toString().includes("Password") ||
+                err.toString().includes("credentials") ||
+                err.toString().includes("user") ||
+                err.toString().includes("Auth")) {
+                res.status(401).send({
+                    message: err.toString()
+                });
+            } else {
+                res.status(400).send({
+                    message: err.toString()
+                });
+
+            }
+        });
+}
 
 async function fetchCurrentUser(userName) {
     // let currUser;
