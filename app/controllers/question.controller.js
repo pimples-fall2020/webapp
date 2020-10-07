@@ -5,6 +5,8 @@ const auth = require('../utils/auth');
 var payloadChecker = require('payload-validator');
 var currentUserId;
 var currentUser;
+
+
 exports.create = (req, res) => {
 
     const expectedPayload = {
@@ -46,7 +48,7 @@ exports.create = (req, res) => {
                                 res.status(400).send({
                                     message: err.toString()
                                 });
-                            })
+                            });
 
 
                     }).catch(err => {
@@ -229,6 +231,8 @@ async function fetchCurrentUser(userName) {
     });
     if (currUser != undefined && currUser != null) {
         return currUser.dataValues;
+    } else {
+        throw new Error("Unable to find user for given id!");
     }
 
 }
