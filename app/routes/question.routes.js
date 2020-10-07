@@ -20,4 +20,8 @@
 
     //Update a question's answer
     router.put("/:question_id/answer/:answer_id", answerController.updateAnswer);
+
+    //Delete a question's answer
+    router.delete("/:question_id/answer/:answer_id", answerController.deleteAnswer);
+
 module.exports = router;

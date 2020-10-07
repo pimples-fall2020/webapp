@@ -1,12 +1,5 @@
 const dbConfig = require("../config/db.config.js");
 
-// const {
-//     Sequelize,
-//     Op,
-//     Model,
-//     DataTypes
-// } = require("sequelize");
-
 module.exports = (sequelize, Sequelize) => {
     const Question = sequelize.define("question", {
         question_id: {
@@ -24,7 +17,7 @@ module.exports = (sequelize, Sequelize) => {
         timestamps: true,
         createdAt: 'created_timestamp',
         updatedAt: 'updated_timestamp',
-        underscored: true,
+        underscored: true
         //model options above this only
 
     });
@@ -32,4 +25,4 @@ module.exports = (sequelize, Sequelize) => {
 return Question;
 }
 
-//Question and categories have many-to-many relationships defined in junctionModels.js
+//Question and categories have many-to-many relationships defined in index.js
