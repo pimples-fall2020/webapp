@@ -17,4 +17,7 @@
 
     //Answer a question
     router.post("/:question_id/answer", answerController.postAnswer);
+
+    //Update a question's answer
+    router.put("/:question_id/answer/:answer_id", answerController.updateAnswer);
 module.exports = router;
