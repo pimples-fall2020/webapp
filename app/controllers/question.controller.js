@@ -1,14 +1,21 @@
 const db = require("../models");
 const Question = db.question;
+const Category = db.category;
 const User = db.user;
+const sequelize = db.sequelize;
 const auth = require('../utils/auth');
 var payloadChecker = require('payload-validator');
+const {
+    category
+} = require("../models");
 var currentUserId;
 var currentUser;
+
+// ------------Create a question-------------------------------------------
 exports.create = (req, res) => {
 
     const expectedPayload = {
-        "question_text": "What is the meaning of life?"
+        "question_text": ""
         // "categories": [
         //   {
         // "category": "java"
@@ -31,22 +38,77 @@ exports.create = (req, res) => {
 
                     console.log("userid---" + currentUserId);
                     fetchCurrentUser(currentUserId).then((user) => {
-                        console.log(user);
+                        // console.log(user);
                         let ques = req.body;
                         ques.user_id = user.id;
+                        let categories;
+                        //Check if it has categories
+                        if (ques.categories != undefined && ques.categories != null && ques.categories.length != 0) {
+                            categories = ques.categories;
+                        }
                         //insertion
                         Question.create(ques)
-                            .then((data) => {
+                            .then((createdQues) => {
                                 //Inserted
-                                console.log(data.dataValues);
-                                res.status(201).send(data.dataValues);
+                                // console.log(data);
+
+                                // insertedQues.getAnswers().then((ans)=>{
+                                //     console.log(ans);
+                                // }).catch((err)=>{
+                                //     console.log(err);
+                                // });
+                                let insertedQues = createdQues.dataValues;
+                                insertedQues.answers = [];
+
+                                // Add categories
+                                if (categories != undefined & categories != null) {
+
+                                    Category.bulkCreate(categories, {
+                                        validate: true,
+                                        fields: ['category', 'category_id']
+                                    }).then((catArray) => {
+                                        // console.log(catArray);
+                                        let catValuesArray = [];
+                                        catArray.forEach(cat => {
+                                            catValuesArray.push(cat.dataValues);
+                                        });
+
+                                        //Add an association between question-categories
+                                        createdQues.addCategories(catArray).then((quesCat) => {
+                                            // console.log(quesCat);
+                                            console.log("--question created--");
+                                            console.log(insertedQues);
+                                            insertedQues.categories = catValuesArray;
+                                            res.status(201).send({
+                                                message: "Question created",
+                                                data: insertedQues
+                                            });
+
+                                        }).catch((err) => {
+                                            console.log(err);
+                                            res.status(400).send({
+                                                message: err.toString()
+                                            });
+                                        });
+                                    }).catch((err) => {
+                                        console.log(err);
+                                    });
+
+                                } else {
+                                    //Body doesn't have any categories
+                                    res.status(201).send({
+                                        message: "Question created",
+                                        data: insertedQues
+                                    });
+
+                                }
                             })
                             .catch(err => {
                                 console.log(err);
                                 res.status(400).send({
                                     message: err.toString()
                                 });
-                            })
+                            });
 
 
                     }).catch(err => {
@@ -89,6 +151,8 @@ exports.create = (req, res) => {
         });
 }
 
+//--------------------------------------delete a question-----------------------------------------------------
+
 exports.deleteQuestion = (req, res) => {
     let qid = req.params.question_id;
 
@@ -98,32 +162,57 @@ exports.deleteQuestion = (req, res) => {
             if (resultObj.auth != undefined && resultObj.auth == true) {
                 //All good, authenticated! let's delete this!
                 console.log(resultObj + " Authenticated!");
-                Question.destroy({
-                        where: {
-                            question_id: qid
-                        }
-                    }).then(num => {
-                        console.log(num);
-                        if (num == 1) {
-                            //success
-                            res.status(204).send();
-                        } else {
-                            //could not delete. maybe question not found
-                            throw new Error(`Could not delete the question with id=${qid}. The question was not found`);
-                        }
-                    })
-                    .catch(err => {
-                        console.log(err);
-                        if (err.toString().includes('not found')) {
-                            res.status(404).send({
-                                message: err.toString()
+
+                // Check if the question has answers
+                Question.findByPk(qid).then((quesRow)=>{
+                    quesRow.countAnswers().then(count =>{
+                        if(count == 0){
+                            //no answers, can delete
+
+                            Question.destroy({
+                                where: {
+                                    question_id: qid
+                                }
+                            }).then(num => {
+                                console.log(num);
+                                if (num == 1) {
+                                    //success
+                                    res.status(204).send();
+                                } else {
+                                    //could not delete. maybe question not found
+                                    throw new Error(`Could not delete the question with id=${qid}. The question was not found`);
+                                }
+                            })
+                            .catch(err => {
+                                console.log(err);
+                                if (err.toString().includes('not found')) {
+                                    res.status(404).send({
+                                        message: err.toString()
+                                    });
+                                } else {
+                                    res.status(400).send({
+                                        message: err.toString()
+                                    });
+                                }
                             });
-                        } else {
-                            res.status(400).send({
-                                message: err.toString()
-                            });
+
+                        }else{
+                            // has answers
+                            throw new Error("This question has answers, deletion prohibited!")
                         }
+                    }).catch((err)=>{
+                        // console.log(err);
+                        res.status(400).send({
+                            message: err.toString()
+                        }); 
                     });
+                }).catch((err)=>{
+                    console.log(err);
+                    res.status(400).send({
+                        message: err.toString()
+                    }); 
+                });
+               
 
             } else {
                 // return res.status(400).send({
@@ -151,6 +240,8 @@ exports.deleteQuestion = (req, res) => {
             }
         });
 }
+
+
 //---------update a question---------------------
 exports.updateQuestionPut = (req, res) => {
     let qid = req.params.question_id;
@@ -159,37 +250,92 @@ exports.updateQuestionPut = (req, res) => {
             if (resultObj.auth != undefined && resultObj.auth == true) {
                 //All good, authenticated! let's update
                 console.log(resultObj + " Authenticated!");
-                if (req.body.question_text != undefined) {
+                if (req.body.question_text != undefined && req.body.question_text != null) {
                     let updateObject = {
-                        question_text: req.body.question_text
+                        question_text: req.body.question_text,
+                    };
+                    if (req.body.categories != undefined && req.body.categories != null) {
+                        // updateObject.categories= req.body.categories;
+
+                        let catPromises = [];
+
+                        let givenCategories = req.body.categories;
+
+                        givenCategories.forEach(cat => {
+                            //Add new categories to the table if they don't exist
+                            //store those category objects in an array
+
+
+                            let cPromise = Category.findOrCreate({
+                                where: sequelize.where(sequelize.fn('LOWER', sequelize.col('category')), cat.category.toLowerCase()),
+                                defaults: cat
+                            });
+                            catPromises.push(cPromise);
+                        });
+                        Promise.all(catPromises).then((values) => {
+                            // console.log(values);
+                            let categoriesValueArr = [];
+                            let categoriesMappingArr = [];
+                            values.forEach(subArray => {
+                                // 0th element is category, 1st element = created flag 
+                                categoriesValueArr.push(subArray[0].dataValues);
+                                categoriesMappingArr.push(subArray[0]);
+                            });
+
+                            console.log(categoriesValueArr);
+
+                            // update question 
+                            Question.update(updateObject, {
+                                where: {
+                                    question_id: qid
+                                }
+                            }).then((num) => {
+
+                                if (num == 1) {
+                                    //updated successfully
+                                    // use the category array to add to mapping - foo.setBars([]) + foo.addBars(cats)
+                                    Question.findByPk(qid).then((ques) => {
+                                        ques.setCategories(categoriesMappingArr).then((quesCat) => {
+                                            // console.log(quesCat);
+                                            console.log("--mappings created--");                                    
+                                            res.status(204).send();
+                                        }).catch((err) => {
+                                            console.log(err);
+                                            res.status(400).send({
+                                                message: err.toString()
+                                            });
+                                        });
+                                    }).catch((error) => {
+                                        console.log(error);
+                                    })
+
+
+                                } else {
+                                    //could not update. maybe question not found
+                                    throw new Error(`Could not update the question with id=${qid}. The question was not found`);
+                                }
+
+                            }).catch(err => {
+                                console.log(err);
+                                if (err.toString().includes('not found')) {
+                                    res.status(404).send({
+                                        message: err.toString()
+                                    });
+                                } else {
+                                    res.status(400).send({
+                                        message: err.toString()
+                                    });
+                                }
+                            });
+
+                        }).catch((err) => {
+                            console.log(err);
+                        });
                     }
                     //TODO: Add conditions for mandatory fields and no extra fields -- 400 bad request
-                    Question.update(updateObject, {
-                        where: {
-                            question_id: qid
-                        }
-                    }).then((num) => {
-                        console.log(num);
-                        if (num == 1) {
-                            //updated successfully
-                            res.status(204).send();
-                        } else {
-                            //could not delete. maybe question not found
-                            throw new Error(`Could not update the question with id=${qid}. The question was not found`);
-                        }
 
-                    }).catch(err => {
-                        console.log(err);
-                        if (err.toString().includes('not found')) {
-                            res.status(404).send({
-                                message: err.toString()
-                            });
-                        } else {
-                            res.status(400).send({
-                                message: err.toString()
-                            });
-                        }
-                    });
+
+
                 } else {
                     throw new Error("question_text field is mandatory in the request!")
                 }
@@ -229,6 +375,8 @@ async function fetchCurrentUser(userName) {
     });
     if (currUser != undefined && currUser != null) {
         return currUser.dataValues;
+    } else {
+        throw new Error("Unable to find user for given id!");
     }
 
 }

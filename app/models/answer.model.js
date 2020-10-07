@@ -1,14 +1,13 @@
-const dbConfig = require("../config/db.config.js");
 
 module.exports = (sequelize, Sequelize) => {
-    const Question = sequelize.define("question", {
-        question_id: {
+    const Answer = sequelize.define("answer", {
+        answer_id: {
             type: Sequelize.UUID,
             defaultValue: Sequelize.UUIDV4, // Or Sequelize.UUIDV1
             primaryKey: true
             //readOnly: true
         },
-        question_text: {
+        answer_text: {
             type: Sequelize.STRING,
             allowNull: false
         }
@@ -22,7 +21,5 @@ module.exports = (sequelize, Sequelize) => {
 
     });
 
-return Question;
+return Answer;
 }
-
-//Question and categories have many-to-many relationships defined in index.js

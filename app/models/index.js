@@ -21,15 +21,39 @@ db.sequelize = sequelize;
 
 db.user = require("./user.model.js")(sequelize, Sequelize);
 db.question = require("./question.model.js")(sequelize, Sequelize);
-
+db.answer = require("./answer.model.js")(sequelize, Sequelize);
+db.category = require("./category.model.js")(sequelize, Sequelize);
 //--------Associations-----------
 const User = db.user;
 const Question = db.question;
+const Answer = db.answer;
+const Category = db.category;
+//1) User-question
 User.hasMany(Question, {
     foreignKey: 'user_id'
 });
 Question.belongsTo(User, {
   foreignKey: 'user_id'
 });
+
+//2) Question-answer
+Question.hasMany(Answer, {
+  foreignKey: 'question_id'
+});
+Answer.belongsTo(Question, {
+foreignKey: 'question_id'
+});
+
+//3) User-answer
+User.hasMany(Answer, {
+  foreignKey: 'user_id'
+});
+Answer.belongsTo(User, {
+foreignKey: 'user_id'
+});
+
+// 4) Question - categories
+Question.belongsToMany(Category, { through: 'question_categories_mapping' });
+Category.belongsToMany(Question, { through: 'question_categories_mapping' });
 
 module.exports = db;
