@@ -10,6 +10,7 @@ module.exports = app => {
     router.get("/self", userController.findSelf);
     router.put("/self", userController.updateUserPut);
 
+    router.get("/:user_id", userController.getUserById);
   
     app.use('/v1/user', router);
   };

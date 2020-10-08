@@ -12,7 +12,12 @@
     
     //update the question
     router.put("/:question_id", questionController.updateQuestionPut);
+
+    //get all questions, their categories and answers
+    router.get("/", questionController.getAllQuestions);
     
+    //get question by id
+    router.get("/:question_id", questionController.getQuestionById);
     //-----------------ANSWERS-------------------------
 
     //Answer a question
@@ -23,5 +28,8 @@
 
     //Delete a question's answer
     router.delete("/:question_id/answer/:answer_id", answerController.deleteAnswer);
+
+    // get an answer
+    router.get("/:question_id/answer/:answer_id", answerController.getAnswerFromId);
 
 module.exports = router;
