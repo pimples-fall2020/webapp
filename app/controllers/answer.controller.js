@@ -302,6 +302,23 @@ exports.deleteAnswer = (req, res) => {
         });
 }
 
+
+// --------------------GET ANSWER FROM ID -----------------------------
+exports.getAnswerFromId = (req,res) => {
+    //TODO: Error handling for wrong ids
+    let qid = req.params.question_id;
+    let ansId = req.params.answer_id;
+
+    Answer.findOne({
+        where: {
+            answer_id : ansId
+        }
+    }).then( ans => {
+
+        res.send(ans.get({plain: true}));
+    });
+
+}
 async function fetchCurrentUser(userName) {
     // let currUser;
     let currUser = await User.findOne({

@@ -1,6 +1,7 @@
 const db = require("../models");
 const Question = db.question;
 const Category = db.category;
+const Answer = db.answer;
 const User = db.user;
 const sequelize = db.sequelize;
 const auth = require('../utils/auth');
@@ -62,7 +63,7 @@ exports.create = (req, res) => {
 
                                 // Add categories
                                 if (categories != undefined & categories != null) {
-
+                                    //TODO: handle duplicate categories . maybe user include in Question.create
                                     Category.bulkCreate(categories, {
                                         validate: true,
                                         fields: ['category', 'category_id']
@@ -164,55 +165,55 @@ exports.deleteQuestion = (req, res) => {
                 console.log(resultObj + " Authenticated!");
 
                 // Check if the question has answers
-                Question.findByPk(qid).then((quesRow)=>{
-                    quesRow.countAnswers().then(count =>{
-                        if(count == 0){
+                Question.findByPk(qid).then((quesRow) => {
+                    quesRow.countAnswers().then(count => {
+                        if (count == 0) {
                             //no answers, can delete
 
                             Question.destroy({
-                                where: {
-                                    question_id: qid
-                                }
-                            }).then(num => {
-                                console.log(num);
-                                if (num == 1) {
-                                    //success
-                                    res.status(204).send();
-                                } else {
-                                    //could not delete. maybe question not found
-                                    throw new Error(`Could not delete the question with id=${qid}. The question was not found`);
-                                }
-                            })
-                            .catch(err => {
-                                console.log(err);
-                                if (err.toString().includes('not found')) {
-                                    res.status(404).send({
-                                        message: err.toString()
-                                    });
-                                } else {
-                                    res.status(400).send({
-                                        message: err.toString()
-                                    });
-                                }
-                            });
+                                    where: {
+                                        question_id: qid
+                                    }
+                                }).then(num => {
+                                    console.log(num);
+                                    if (num == 1) {
+                                        //success
+                                        res.status(204).send();
+                                    } else {
+                                        //could not delete. maybe question not found
+                                        throw new Error(`Could not delete the question with id=${qid}. The question was not found`);
+                                    }
+                                })
+                                .catch(err => {
+                                    console.log(err);
+                                    if (err.toString().includes('not found')) {
+                                        res.status(404).send({
+                                            message: err.toString()
+                                        });
+                                    } else {
+                                        res.status(400).send({
+                                            message: err.toString()
+                                        });
+                                    }
+                                });
 
-                        }else{
+                        } else {
                             // has answers
                             throw new Error("This question has answers, deletion prohibited!")
                         }
-                    }).catch((err)=>{
+                    }).catch((err) => {
                         // console.log(err);
                         res.status(400).send({
                             message: err.toString()
-                        }); 
+                        });
                     });
-                }).catch((err)=>{
+                }).catch((err) => {
                     console.log(err);
                     res.status(400).send({
                         message: err.toString()
-                    }); 
+                    });
                 });
-               
+
 
             } else {
                 // return res.status(400).send({
@@ -297,7 +298,7 @@ exports.updateQuestionPut = (req, res) => {
                                     Question.findByPk(qid).then((ques) => {
                                         ques.setCategories(categoriesMappingArr).then((quesCat) => {
                                             // console.log(quesCat);
-                                            console.log("--mappings created--");                                    
+                                            console.log("--mappings created--");
                                             res.status(204).send();
                                         }).catch((err) => {
                                             console.log(err);
@@ -331,6 +332,8 @@ exports.updateQuestionPut = (req, res) => {
                         }).catch((err) => {
                             console.log(err);
                         });
+                    } else {
+                        //TODO: if categories not given, update the ques text
                     }
                     //TODO: Add conditions for mandatory fields and no extra fields -- 400 bad request
 
@@ -366,6 +369,71 @@ exports.updateQuestionPut = (req, res) => {
         });
 }
 
+// Get questions and their data
+exports.getAllQuestions = (req, res) => {
+//TODO: Error handling
+    Question.findAll({
+        include: [
+            {
+                model: Category,
+                through: {
+                    attributes: []
+                }
+            },  
+            // Category,         
+           Answer
+          ]
+    })
+        .then((questions)=>{
+            // console.log(questions);
+            questions.forEach(ques=>{
+                // console.log(ques.dataValues);
+                // ques.categories.forEach(cat=> {
+                //     cat = cat.get({ plain: true});
+                // });
+
+                // ques.answers.forEach( ans =>{
+                //     ans = ans.get({ plain: true });
+                // });
+                
+                ques = ques.get({ plain: true});
+                console.log(ques);
+            });
+
+            res.send(questions);
+
+    });
+
+}
+
+
+//Get a question by id
+exports.getQuestionById = (req,res) => {
+    let qid = req.params.question_id;
+    Question.findOne({
+        where: {
+            question_id : qid
+        },
+        include: [
+            {
+                model: Category,
+                through: {
+                    attributes: []
+                }
+            },  
+            // Category,         
+           Answer
+          ]
+    })
+        .then((question)=>{                
+                question = question.get({ plain: true});
+                console.log(question);            
+
+            res.send(question);
+
+    });
+
+}
 async function fetchCurrentUser(userName) {
     // let currUser;
     let currUser = await User.findOne({

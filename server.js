@@ -27,7 +27,7 @@ app.get("/", (req, res) => {
   res.json({ message: "Welcome to CSYE 6225 project by Sanket Pimple" });
 });
 require("./app/routes/user.routes")(app);
-app.use('/v1/question', require('./app/routes/question.routes'));
+app.use('/v1/questions?', require('./app/routes/question.routes'));
 // set port, listen for requests
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
