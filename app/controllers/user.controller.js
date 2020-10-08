@@ -306,6 +306,31 @@ exports.updateUserPut = (req, res) => {
     });
 };
 
+
+exports.getUserById = (req,res) => {
+  let user_id = req.params.user_id;
+
+  User.findByPk(user_id).then((user)=>{
+    if(user==undefined || user == null){
+      throw new Error("User not found, please check the id");
+    }
+    let foundUser = user.get({plain: true});
+    delete foundUser.password;
+    res.send(foundUser);
+  })
+  .catch(err =>{
+    if(err.toString().includes("found")){
+      res.status(404).send({
+        message: err.toString()
+      });
+    }else{
+      res.status(400).send({
+        message: "Error:" + err.toString()
+      });
+    }
+  });
+}
+
 async function getHash(email) {
   // let hash = null;
   const data = await User.findAll({

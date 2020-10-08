@@ -11,7 +11,7 @@ const {
 } = require("../models");
 var currentUserId;
 var currentUser;
-
+//TODO: Check all catch blocks and add response errors there
 // ------------Create a question-------------------------------------------
 exports.create = (req, res) => {
 
@@ -63,37 +63,91 @@ exports.create = (req, res) => {
 
                                 // Add categories
                                 if (categories != undefined & categories != null) {
-                                    //TODO: handle duplicate categories . maybe user include in Question.create
-                                    Category.bulkCreate(categories, {
-                                        validate: true,
-                                        fields: ['category', 'category_id']
-                                    }).then((catArray) => {
-                                        // console.log(catArray);
-                                        let catValuesArray = [];
-                                        catArray.forEach(cat => {
-                                            catValuesArray.push(cat.dataValues);
+                                    
+
+                                    let catPromises = [];
+
+                                    categories.forEach(cat => {
+                                        //Add new categories to the table if they don't exist
+                                        //store those category objects in an array
+
+
+                                        let cPromise = Category.findOrCreate({
+                                            where: sequelize.where(sequelize.fn('LOWER', sequelize.col('category')), cat.category.toLowerCase()),
+                                            defaults: cat
+                                        });
+                                        catPromises.push(cPromise);
+                                    });
+
+                                    Promise.all(catPromises).then((values) => {
+                                        let categoriesValueArr = [];
+                                        let categoriesMappingArr = [];
+                                        values.forEach(subArray => {
+                                            // 0th element is category, 1st element = created flag 
+                                            categoriesValueArr.push(subArray[0].dataValues);
+                                            categoriesMappingArr.push(subArray[0]);
                                         });
 
-                                        //Add an association between question-categories
-                                        createdQues.addCategories(catArray).then((quesCat) => {
+                                          //Add an association between question-categories
+                                          createdQues.addCategories(categoriesMappingArr).then((quesCat) => {
                                             // console.log(quesCat);
                                             console.log("--question created--");
                                             console.log(insertedQues);
-                                            insertedQues.categories = catValuesArray;
+                                            insertedQues.categories = categoriesValueArr;
                                             res.status(201).send({
                                                 message: "Question created",
                                                 data: insertedQues
                                             });
 
                                         }).catch((err) => {
-                                            console.log(err);
-                                            res.status(400).send({
-                                                message: err.toString()
-                                            });
+                                            // console.log(err);
+                                            if(err.toString().includes('SequelizeUniqueConstraintError')){
+                                                res.status(400).send({
+                                                    message: "Error: Please do not add duplicate categories in same question!"
+                                                });
+                                            }else{
+                                                res.status(400).send({
+                                                    message: err.toString()
+                                                });
+                                            }
+                                            
                                         });
                                     }).catch((err) => {
                                         console.log(err);
+                                        res.status(400).send({
+                                            message: "Error:" + err.toString()
+                                        });
                                     });
+                                    // Category.bulkCreate(categories, {
+                                    //     validate: true,
+                                    //     fields: ['category', 'category_id']
+                                    // }).then((catArray) => {
+                                    //     // console.log(catArray);
+                                    //     let catValuesArray = [];
+                                    //     catArray.forEach(cat => {
+                                    //         catValuesArray.push(cat.dataValues);
+                                    //     });
+
+                                    //     //Add an association between question-categories
+                                    //     createdQues.addCategories(catArray).then((quesCat) => {
+                                    //         // console.log(quesCat);
+                                    //         console.log("--question created--");
+                                    //         console.log(insertedQues);
+                                    //         insertedQues.categories = catValuesArray;
+                                    //         res.status(201).send({
+                                    //             message: "Question created",
+                                    //             data: insertedQues
+                                    //         });
+
+                                    //     }).catch((err) => {
+                                    //         console.log(err);
+                                    //         res.status(400).send({
+                                    //             message: err.toString()
+                                    //         });
+                                    //     });
+                                    // }).catch((err) => {
+                                    //     console.log(err);
+                                    // });
 
                                 } else {
                                     //Body doesn't have any categories
@@ -333,7 +387,37 @@ exports.updateQuestionPut = (req, res) => {
                             console.log(err);
                         });
                     } else {
-                        //TODO: if categories not given, update the ques text
+                        //  if categories not given, update the ques text
+
+                         // update question 
+                         Question.update(updateObject, {
+                            where: {
+                                question_id: qid
+                            }
+                        }).then((num) => {
+
+                            if (num == 1) {
+                                //updated successfully
+                                res.status(204).send();                                
+
+                            } else {
+                                //could not update. maybe question not found
+                                throw new Error(`Could not update the question with id=${qid}. The question was not found`);
+                            }
+
+                        }).catch(err => {
+                            console.log(err);
+                            if (err.toString().includes('not found')) {
+                                res.status(404).send({
+                                    message: err.toString()
+                                });
+                            } else {
+                                res.status(400).send({
+                                    message: err.toString()
+                                });
+                            }
+                        });
+
                     }
                     //TODO: Add conditions for mandatory fields and no extra fields -- 400 bad request
 
@@ -371,22 +455,21 @@ exports.updateQuestionPut = (req, res) => {
 
 // Get questions and their data
 exports.getAllQuestions = (req, res) => {
-//TODO: Error handling
+    //TODO: Error handling
     Question.findAll({
-        include: [
-            {
-                model: Category,
-                through: {
-                    attributes: []
-                }
-            },  
-            // Category,         
-           Answer
-          ]
-    })
-        .then((questions)=>{
+            include: [{
+                    model: Category,
+                    through: {
+                        attributes: []
+                    }
+                },
+                // Category,         
+                Answer
+            ]
+        })
+        .then((questions) => {
             // console.log(questions);
-            questions.forEach(ques=>{
+            questions.forEach(ques => {
                 // console.log(ques.dataValues);
                 // ques.categories.forEach(cat=> {
                 //     cat = cat.get({ plain: true});
@@ -395,43 +478,46 @@ exports.getAllQuestions = (req, res) => {
                 // ques.answers.forEach( ans =>{
                 //     ans = ans.get({ plain: true });
                 // });
-                
-                ques = ques.get({ plain: true});
+
+                ques = ques.get({
+                    plain: true
+                });
                 console.log(ques);
             });
 
             res.send(questions);
 
-    });
+        });
 
 }
 
 
 //Get a question by id
-exports.getQuestionById = (req,res) => {
+exports.getQuestionById = (req, res) => {
     let qid = req.params.question_id;
     Question.findOne({
-        where: {
-            question_id : qid
-        },
-        include: [
-            {
-                model: Category,
-                through: {
-                    attributes: []
-                }
-            },  
-            // Category,         
-           Answer
-          ]
-    })
-        .then((question)=>{                
-                question = question.get({ plain: true});
-                console.log(question);            
+            where: {
+                question_id: qid
+            },
+            include: [{
+                    model: Category,
+                    through: {
+                        attributes: []
+                    }
+                },
+                // Category,         
+                Answer
+            ]
+        })
+        .then((question) => {
+            question = question.get({
+                plain: true
+            });
+            console.log(question);
 
             res.send(question);
 
-    });
+        });
 
 }
 async function fetchCurrentUser(userName) {
