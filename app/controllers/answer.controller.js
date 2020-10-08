@@ -49,12 +49,12 @@ exports.postAnswer = (req, res) => {
                                                 message: err.toString()
                                             });
                                         });
-                                }else{
+                                } else {
                                     throw new Error("Error: Unable to fetch question, please check the question_id");
                                 }
                             })
                             .catch((err) => {
-                                res.status(400).send({
+                                res.status(404).send({
                                     message: "Error: Unable to fetch question, please check the question_id"
                                 });
                             });
@@ -97,7 +97,7 @@ exports.postAnswer = (req, res) => {
 
 //----------------update the answer--------------------------------
 //TODO: Simplify the nested promises below!!!!!!
-exports.updateAnswer = (req,res) => {
+exports.updateAnswer = (req, res) => {
     let qid = req.params.question_id;
     let ansId = req.params.answer_id;
 
@@ -106,7 +106,7 @@ exports.updateAnswer = (req,res) => {
             if (resultObj.auth != undefined && resultObj.auth == true) {
                 //All good, authenticated!
                 console.log(resultObj + " Authenticated!");
-                
+
 
                 currentUserId = resultObj.cred.username;
                 if (req.body.answer_text == undefined || req.body.answer_text == '') {
@@ -115,62 +115,99 @@ exports.updateAnswer = (req,res) => {
 
                     fetchCurrentUser(currentUserId).then((user) => {
                         // console.log(user);
+                        Answer.findByPk(ansId).then((ans) => {
 
+                            if (ans == undefined || ans == null) {
+                                throw new Error(`Could not update the Answer with id=${ansId}. The answer was not found`);
+                            }
+                            if (ans.user_id != user.id) {
+                                throw new Error("Unauthorized: Only owners of the question are allowed to update!");
+                            }
 
-                        getQuestionFromId(qid).then((ques) => {
-                                if (ques != undefined && ques != null) {
-                                    //Question is valid
+                            getQuestionFromId(qid).then((ques) => {
+                                    if (ques != undefined && ques != null) {
+                                        //Question is valid
 
-                                    let updateAnswerObj = {
-                                        answer_text: req.body.answer_text,
-                                        // question_id: qid,
-                                        // user_id: user.id
-                                    };
+                                        let updateAnswerObj = {
+                                            answer_text: req.body.answer_text,
+                                            // question_id: qid,
+                                            // user_id: user.id
+                                        };
 
-                                    //Update the answer
-                                    Answer.update(updateAnswerObj, {
-                                        where : {
-                                            answer_id : ansId
-                                        }
-                                    })
-                                        .then((num) => {
-                                            console.log(num);
-                                            if (num == 1) {
-                                                //updated successfully
-                                                res.status(204).send();
-                                            } else {
-                                                //could not delete. maybe question not found
-                                                throw new Error(`Could not update the Answer with id=${ansId}. The answer was not found`);
-                                            }
-                                        })
-                                        .catch(err => {
-                                            console.log(err);
-                                            if (err.toString().includes('not found')) {
-                                                res.status(404).send({
-                                                    message: err.toString()
-                                                });
-                                            } else {
-                                                res.status(400).send({
-                                                    message: err.toString()
-                                                });
-                                            }
-                                        });
-                                }else{
-                                    throw new Error("Error: Unable to fetch question, please check the question_id");
-                                }
-                            })
-                            .catch((err) => {
-                                res.status(404).send({
-                                    message: "Error: Unable to fetch question, please check the question_id. " + err.toString()
+                                        //Update the answer
+                                        Answer.update(updateAnswerObj, {
+                                                where: {
+                                                    answer_id: ansId
+
+                                                }
+                                            })
+                                            .then((num) => {
+                                                console.log(num);
+                                                if (num == 1) {
+                                                    //updated successfully
+                                                    res.status(204).send();
+                                                } else {
+                                                    //could not delete. maybe question not found
+                                                    throw new Error(`Could not update the Answer with id=${ansId}. The answer was not found`);
+
+                                                }
+                                            })
+                                            .catch(err => {
+                                                console.log(err);
+                                                if (err.toString().includes('Unauthorized')) {
+                                                    res.status(401).send({
+                                                        message: err.toString()
+                                                    });
+                                                } else if (err.toString().includes('not found')) {
+                                                    res.status(404).send({
+                                                        message: err.toString()
+                                                    });
+                                                } else {
+                                                    res.status(400).send({
+                                                        message: err.toString()
+                                                    });
+                                                }
+                                            });
+                                    } else {
+                                        throw new Error("Error: Unable to fetch question, please check the question_id");
+                                    }
+                                })
+                                .catch((err) => {
+                                    res.status(404).send({
+                                        message: "Error: Unable to fetch question, please check the question_id. " + err.toString()
+                                    });
                                 });
-                            });
+
+                        }).catch(err => {
+                            console.log(err);
+                            if (err.toString().includes('Unauthorized')) {
+                                res.status(401).send({
+                                    message: err.toString()
+                                });
+                            }
+                            if (err.toString().includes('not found')) {
+                                res.status(404).send({
+                                    message: err.toString()
+                                });
+                            } else {
+                                res.status(400).send({
+                                    message: err.toString()
+                                });
+                            }
+                        });
 
 
 
                     }).catch(err => {
-                        res.status(400).send({
-                            message: "Error: Error while fetching user for associating with answer. "+ err.toString()
-                        });
+                        if (err.toString().includes('Unauthorized')) {
+                            res.status(401).send({
+                                message: err.toString()
+                            });
+                        } else {
+                            res.status(400).send({
+                                message: "Error: Error while fetching user for associating with question"
+                            });
+                        }
                     });
                 }
 
@@ -213,26 +250,33 @@ exports.deleteAnswer = (req, res) => {
             if (resultObj.auth != undefined && resultObj.auth == true) {
                 //All good, authenticated!
                 console.log(resultObj + " Authenticated!");
-                
+
 
                 currentUserId = resultObj.cred.username;
 
-                    fetchCurrentUser(currentUserId).then((user) => {
-                        // console.log(user);
+                fetchCurrentUser(currentUserId).then((user) => {
+                    console.log(user);
+                    Answer.findByPk(ansId).then((ans) => {
 
+                        if (ans == undefined || ans == null) {
+                            throw new Error(`Could not update the Answer with id=${ansId}. The answer was not found`);
+                        }
+                        if (ans.user_id != user.id) {
+                            throw new Error("Unauthorized: Only owners of the question are allowed to update!");
+                        }
 
                         getQuestionFromId(qid).then((ques) => {
                                 if (ques != undefined && ques != null) {
                                     //Question is valid
 
-                                 
+
 
                                     //delete the answer
                                     Answer.destroy({
-                                        where : {
-                                            answer_id : ansId
-                                        }
-                                    })
+                                            where: {
+                                                answer_id: ansId
+                                            }
+                                        })
                                         .then((num) => {
                                             console.log(num);
                                             if (num == 1) {
@@ -255,7 +299,7 @@ exports.deleteAnswer = (req, res) => {
                                                 });
                                             }
                                         });
-                                }else{
+                                } else {
                                     throw new Error("Error: Unable to fetch question, please check the question_id");
                                 }
                             })
@@ -265,14 +309,30 @@ exports.deleteAnswer = (req, res) => {
                                 });
                             });
 
-
-
                     }).catch(err => {
-                        res.status(400).send({
-                            message: "Error: Error while fetching user for associating with answer. "+ err.toString()
-                        });
+                        console.log(err);
+                        if (err.toString().includes('Unauthorized')) {
+                            res.status(401).send({
+                                message: err.toString()
+                            });
+                        }
+                        if (err.toString().includes('not found')) {
+                            res.status(404).send({
+                                message: err.toString()
+                            });
+                        } else {
+                            res.status(400).send({
+                                message: err.toString()
+                            });
+                        }
                     });
-                
+
+                }).catch(err => {
+                    res.status(400).send({
+                        message: "Error: Error while fetching user for associating with answer. " + err.toString()
+                    });
+                });
+
 
 
             } else {
@@ -304,19 +364,27 @@ exports.deleteAnswer = (req, res) => {
 
 
 // --------------------GET ANSWER FROM ID -----------------------------
-exports.getAnswerFromId = (req,res) => {
+exports.getAnswerFromId = (req, res) => {
     //TODO: Error handling for wrong ids
     let qid = req.params.question_id;
     let ansId = req.params.answer_id;
 
     Answer.findOne({
         where: {
-            answer_id : ansId
+            answer_id: ansId
         }
-    }).then( ans => {
-
-        res.send(ans.get({plain: true}));
-    });
+    }).then(ans => {
+        if(ans==undefined || ans==null) {
+            throw new Error("Answer not found, wrong ID!")
+        }
+        res.send(ans.get({
+            plain: true
+        }));
+    }).catch(err => {
+        res.status(404).send({
+            message: "Unable to get the answer from if, please check the id!"
+        });
+    })
 
 }
 async function fetchCurrentUser(userName) {
