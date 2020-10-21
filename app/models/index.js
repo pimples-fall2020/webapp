@@ -1,6 +1,17 @@
-const dbConfig = require("../config/db.config.js");
+let dbConfig;
+if (process.env.IS_EC2 == true) {
+  dbConfig = require("../config/db.config-ec2.js");
+} else {
 
-const {Sequelize, Op, Model, DataTypes} = require("sequelize");
+  dbConfig = require("../config/db.config.js");
+}
+
+const {
+  Sequelize,
+  Op,
+  Model,
+  DataTypes
+} = require("sequelize");
 const sequelize = new Sequelize(dbConfig.DB, dbConfig.USER, dbConfig.PASSWORD, {
   host: dbConfig.HOST,
   dialect: dbConfig.dialect,
@@ -30,7 +41,7 @@ const Answer = db.answer;
 const Category = db.category;
 //1) User-question
 User.hasMany(Question, {
-    foreignKey: 'user_id'
+  foreignKey: 'user_id'
 });
 Question.belongsTo(User, {
   foreignKey: 'user_id'
@@ -41,7 +52,7 @@ Question.hasMany(Answer, {
   foreignKey: 'question_id'
 });
 Answer.belongsTo(Question, {
-foreignKey: 'question_id'
+  foreignKey: 'question_id'
 });
 
 //3) User-answer
@@ -49,11 +60,15 @@ User.hasMany(Answer, {
   foreignKey: 'user_id'
 });
 Answer.belongsTo(User, {
-foreignKey: 'user_id'
+  foreignKey: 'user_id'
 });
 
 // 4) Question - categories
-Question.belongsToMany(Category, { through: 'question_categories_mapping' });
-Category.belongsToMany(Question, { through: 'question_categories_mapping' });
+Question.belongsToMany(Category, {
+  through: 'question_categories_mapping'
+});
+Category.belongsToMany(Question, {
+  through: 'question_categories_mapping'
+});
 
 module.exports = db;
