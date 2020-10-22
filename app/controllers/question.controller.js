@@ -7,6 +7,7 @@ const File = db.file;
 const sequelize = db.sequelize;
 const auth = require('../utils/auth');
 var payloadChecker = require('payload-validator');
+var AWS = require('aws-sdk');
 const {
     category
 } = require("../models");
@@ -60,7 +61,7 @@ exports.create = (req, res) => {
                                 //     console.log(err);
                                 // });
                                 let insertedQues = createdQues.dataValues;
-                                insertedQues.answers = [];                                
+                                insertedQues.answers = [];
                                 insertedQues.attachments = [];
                                 // Add categories
                                 if (categories != undefined & categories != null) {
@@ -238,37 +239,124 @@ exports.deleteQuestion = (req, res) => {
                                     if (quesRow.dataValues.user_id != user.id) {
                                         throw new Error("Unauthorized: Only question owner can delete a question!");
                                     }
-                                    Question.destroy({
-                                            where: {
-                                                question_id: qid,
-                                                user_id: user.id
-                                            }
-                                        }).then(num => {
-                                            console.log(num);
-                                            if (num == 1) {
-                                                //success
-                                                res.status(204).send();
+                                    quesRow.getFiles()
+                                        .then((files) => {
+                                            console.log(files);
+                                            if (files != undefined && files != null && files.length != 0) {
+                                                // console.log(files);
+                                                //delete from s3 bucket, then DB
+                                                let deleteObj = [];
+                                                files.forEach(fl => {
+                                                    let obj = {
+                                                        Key: fl.s3_object_name
+                                                    };
+                                                    deleteObj.push(obj);
+                                                });
+
+
+                                                AWS.config.update({
+                                                    
+                                                    region: 'us-east-1'
+                                                });
+                                            
+                                                // Create S3 service object
+                                                s3 = new AWS.S3({
+                                                    apiVersion: '2006-03-01'
+                                                });
+                                            
+
+                                                var params = {
+                                                    Bucket: process.env.Bucket,
+                                                    Delete: {
+                                                        Objects: deleteObj,
+                                                        Quiet: false
+                                                    }
+                                                };
+                                                s3.deleteObjects(params, function (err, data) {
+                                                    if (err) console.log(err, err.stack); // an error occurred
+                                                    else {
+                                                        console.log(data); // successful response
+                                                        // quesRow.removeFiles()
+                                                        //     .then((rem) => {
+                                                        //         console.log(rem);
+                                                        //     })
+                                                        //     .catch(err => {
+                                                        //         res.status(400).send({
+                                                        //             message: "Unable to delete from DB"
+                                                        //         });
+                                                        //     })
+
+                                                        Question.destroy({
+                                                            where: {
+                                                                question_id: qid,
+                                                                user_id: user.id
+                                                            }
+                                                        }).then(num => {
+                                                            console.log(num);
+                                                            if (num == 1) {
+                                                                //success
+                                                                res.status(204).send();
+                                                            } else {
+                                                                //could not delete. maybe question not found
+                                                                throw new Error(`Could not delete the question with id=${qid}. The question was not found`);
+                                                            }
+                                                        })
+                                                        .catch(err => {
+                                                            // console.log(err);
+                                                            if (err.toString().includes('not found')) {
+                                                                res.status(404).send({
+                                                                    message: err.toString()
+                                                                });
+                                                            } else if (err.toString().includes('Unauthorized')) {
+                                                                res.status(401).send({
+                                                                    message: err.toString()
+                                                                });
+                                                            } else {
+                                                                res.status(400).send({
+                                                                    message: err.toString()
+                                                                });
+                                                            }
+                                                        });
+                                                    }
+                                                });
                                             } else {
-                                                //could not delete. maybe question not found
-                                                throw new Error(`Could not delete the question with id=${qid}. The question was not found`);
+                                                Question.destroy({
+                                                        where: {
+                                                            question_id: qid,
+                                                            user_id: user.id
+                                                        }
+                                                    }).then(num => {
+                                                        console.log(num);
+                                                        if (num == 1) {
+                                                            //success
+                                                            res.status(204).send();
+                                                        } else {
+                                                            //could not delete. maybe question not found
+                                                            throw new Error(`Could not delete the question with id=${qid}. The question was not found`);
+                                                        }
+                                                    })
+                                                    .catch(err => {
+                                                        // console.log(err);
+                                                        if (err.toString().includes('not found')) {
+                                                            res.status(404).send({
+                                                                message: err.toString()
+                                                            });
+                                                        } else if (err.toString().includes('Unauthorized')) {
+                                                            res.status(401).send({
+                                                                message: err.toString()
+                                                            });
+                                                        } else {
+                                                            res.status(400).send({
+                                                                message: err.toString()
+                                                            });
+                                                        }
+                                                    });
                                             }
-                                        })
-                                        .catch(err => {
-                                            // console.log(err);
-                                            if (err.toString().includes('not found')) {
-                                                res.status(404).send({
-                                                    message: err.toString()
-                                                });
-                                            } else if (err.toString().includes('Unauthorized')) {
-                                                res.status(401).send({
-                                                    message: err.toString()
-                                                });
-                                            } else {
-                                                res.status(400).send({
-                                                    message: err.toString()
-                                                });
-                                            }
+                                        }).catch(err => {
+                                            console.log(err);
+                                            res.status(400).send(err.toString());
                                         });
+
                                 })
                                 .catch(err => {
                                     if (err.toString().includes('Unauthorized')) {
@@ -554,7 +642,10 @@ exports.getAllQuestions = (req, res) => {
                             'file_name',
                             's3_object_name',
                             'file_id',
-                            'created_date'
+                            'created_date',
+                            'etag',
+                            'server_side_encryption',
+                            'location'
                         ]
                     }
                 },
@@ -565,7 +656,10 @@ exports.getAllQuestions = (req, res) => {
                         'file_name',
                         's3_object_name',
                         'file_id',
-                        'created_date'
+                        'created_date',
+                        'etag',
+                        'server_side_encryption',
+                        'location'
                     ]
                 }
 
@@ -589,11 +683,11 @@ exports.getAllQuestions = (req, res) => {
                 });
                 ques.attachments = ques.files;
                 delete ques.files;
-                ques.answers.forEach(ans =>{
+                ques.answers.forEach(ans => {
                     ans.attachments = ans.files;
                     delete ans.files;
                 });
-                
+
                 console.log(ques);
                 respJson.push(ques);
             });
@@ -628,7 +722,10 @@ exports.getQuestionById = (req, res) => {
                             'file_name',
                             's3_object_name',
                             'file_id',
-                            'created_date'
+                            'created_date',
+                            'etag',
+                            'server_side_encryption',
+                            'location'
                         ]
                     }
                 },
@@ -639,7 +736,10 @@ exports.getQuestionById = (req, res) => {
                         'file_name',
                         's3_object_name',
                         'file_id',
-                        'created_date'
+                        'created_date',
+                        'etag',
+                        'server_side_encryption',
+                        'location'
                     ]
                 }
 
@@ -652,11 +752,11 @@ exports.getQuestionById = (req, res) => {
 
             question.attachments = question.files;
             delete question.files;
-            question.answers.forEach(ans =>{
+            question.answers.forEach(ans => {
                 ans.attachments = ans.files;
                 delete ans.files;
             });
-            
+
             // console.log(ques);
             // respJson.push(ques);
 

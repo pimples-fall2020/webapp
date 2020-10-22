@@ -75,7 +75,8 @@ Category.belongsToMany(Question, {
 
 // 5) Question-files -- one-to-many
 Question.hasMany(File, {
-  foreignKey: 'question_id'
+  foreignKey: 'question_id',
+  onDelete:'CASCADE'
 });
 File.belongsTo(Question, {
   foreignKey: 'question_id'
@@ -83,7 +84,8 @@ File.belongsTo(Question, {
 
 // Answer-files -- one to many
 Answer.hasMany(File, {
-  foreignKey: 'answer_id'
+  foreignKey: 'answer_id',
+  onDelete:'CASCADE'
 });
 File.belongsTo(Answer, {
   foreignKey: 'answer_id'

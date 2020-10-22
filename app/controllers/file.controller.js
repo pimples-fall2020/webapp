@@ -41,6 +41,11 @@ exports.attachToQuestion = (req, res) => {
                             // res.send();
                             var file = req.file;
 
+                            let ext = path.extname(file.originalname);
+                            if (ext !== '.png' && ext !== '.jpg' && ext !== '.gif' && ext !== '.jpeg') {
+                                throw new Error("File type error. Please upload image files");
+                            }
+
                             let uploadResult = uploadToS3(file, qid);
 
                             uploadResult.upload_promise
@@ -91,8 +96,8 @@ exports.attachToQuestion = (req, res) => {
                                     message: err.toString()
                                 });
                             } else {
-                                res.status(404).send({
-                                    message: "Error: Unable to fetch question, please check the question_id"
+                                res.status(400).send({
+                                    message: err.toString()
                                 });
                             }
                         });
@@ -170,12 +175,20 @@ exports.attachToAnswer = (req, res) => {
                                 //TODO: Eliminate extra querying for user and questions as answer Eager query is returning all associations. Also check if params qid == answer's question_id
                                 // console.log("---check eager loading---");
                                 // console.log(ans);
+                                if(ans==undefined || ans==null){
+                                    throw new Error("Error obtaining the answer. Please ensure the answer id is correct!");
+                                }
                                 if (ans.user_id != user.id) {
                                     throw new Error("Unauthorized: Only owners of the question are allowed to attach file!");
                                 }
                                 // console.log(req.file);
                                 // res.send();
                                 var file = req.file;
+
+                                let ext = path.extname(file.originalname);
+                                if (ext !== '.png' && ext !== '.jpg' && ext !== '.gif' && ext !== '.jpeg') {
+                                    throw new Error("File type error. Please upload image files");
+                                }
 
                                 let uploadResult = uploadToS3(file, ansId);
 
@@ -316,10 +329,10 @@ exports.deleteQuestionFile = (req, res) => {
                         // console.log(queryData.dataValues);
                         // console.log(queryData.question.dataValues);
                         // console.log(queryData.question.user.dataValues);
-                        if(queryData==undefined || queryData==null){
+                        if (queryData == undefined || queryData == null) {
                             throw new Error("Unable to retrieve the file. Please check file id and other details");
                         }
-                        if(queryData.question==undefined || queryData.question == null){
+                        if (queryData.question == undefined || queryData.question == null) {
                             throw new Error("There is no question associated with this file!");
                         }
                         //check if the user is authorized
@@ -447,10 +460,10 @@ exports.deleteAnswerFile = (req, res) => {
                         // console.log(queryData.dataValues);
                         // console.log(queryData.question.dataValues);
                         // console.log(queryData.question.user.dataValues);
-                        if(queryData==undefined || queryData==null){
+                        if (queryData == undefined || queryData == null) {
                             throw new Error("Unable to retrieve the file. Please check file id and other details");
                         }
-                        if(queryData.answer==undefined || queryData.answer == null){
+                        if (queryData.answer == undefined || queryData.answer == null) {
                             throw new Error("There is no answer associated with this file!");
                         }
                         //check if the user is authorized
@@ -562,8 +575,7 @@ exports.deleteAnswerFile = (req, res) => {
 function uploadToS3(file, modelId) {
 
     AWS.config.update({
-        // accessKeyId: 'AKIARBIX7ML74LJOY4ND',
-        // secretAccessKey: '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',
+       
         region: 'us-east-1'
     });
 
@@ -574,7 +586,7 @@ function uploadToS3(file, modelId) {
 
     // call S3 to retrieve upload file to specified bucket
     var uploadParams = {
-        Bucket: 'webapp.sanket.pimple',
+        Bucket: process.env.Bucket,
         Key: '',
         Body: ''
     };
@@ -605,8 +617,7 @@ function uploadToS3(file, modelId) {
 
 function deleteS3Object(file) {
     AWS.config.update({
-        // accessKeyId: 'AKIARBIX7ML74LJOY4ND',
-        // secretAccessKey: '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',
+      
         region: 'us-east-1'
     });
 
@@ -616,7 +627,7 @@ function deleteS3Object(file) {
     });
 
     var params = {
-        Bucket: 'webapp.sanket.pimple',
+        Bucket: process.env.Bucket,
         Key: file
     };
 
