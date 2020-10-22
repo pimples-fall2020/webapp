@@ -562,8 +562,8 @@ exports.deleteAnswerFile = (req, res) => {
 function uploadToS3(file, modelId) {
 
     AWS.config.update({
-        accessKeyId: 'AKIARBIX7ML74LJOY4ND',
-        secretAccessKey: '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',
+        // accessKeyId: 'AKIARBIX7ML74LJOY4ND',
+        // secretAccessKey: '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',
         region: 'us-east-1'
     });
 
@@ -605,8 +605,8 @@ function uploadToS3(file, modelId) {
 
 function deleteS3Object(file) {
     AWS.config.update({
-        accessKeyId: 'AKIARBIX7ML74LJOY4ND',
-        secretAccessKey: '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',
+        // accessKeyId: 'AKIARBIX7ML74LJOY4ND',
+        // secretAccessKey: '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',
         region: 'us-east-1'
     });
 
