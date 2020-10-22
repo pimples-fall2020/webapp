@@ -24,7 +24,7 @@ module.exports = (sequelize, Sequelize) => {
         location: {
             type: Sequelize.STRING
         }
-
+        // TODO: Create composite keys: questionId + filename , answerId + fileName ==check for conflict policy replace
     }, {
         timestamps: true,
         createdAt: 'created_date',

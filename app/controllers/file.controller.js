@@ -12,7 +12,7 @@ var path = require('path');
 const {
     v4: uuidv4
 } = require('uuid');
-
+//TODO: For file upload handle uploading the duplicate files == check for conflict policy replace
 exports.attachToQuestion = (req, res) => {
     let qid = req.params.question_id;
     let creds;
@@ -65,8 +65,8 @@ exports.attachToQuestion = (req, res) => {
                                                     let resJson = {
                                                         file_name: createResult.file_name,
                                                         s3_object_name: createResult.s3_object_name,
-                                                        file_id : createResult.file_id,
-                                                        created_date : createResult.created_date
+                                                        file_id: createResult.file_id,
+                                                        created_date: createResult.created_date
                                                     }
                                                     res.status(201).send(resJson);
                                                 })
@@ -91,10 +91,10 @@ exports.attachToQuestion = (req, res) => {
                                     message: err.toString()
                                 });
                             } else {
-                            res.status(404).send({
-                                message: "Error: Unable to fetch question, please check the question_id"
-                            });
-                        }
+                                res.status(404).send({
+                                    message: "Error: Unable to fetch question, please check the question_id"
+                                });
+                            }
                         });
 
                 }).catch(err => {
@@ -119,7 +119,7 @@ exports.attachToQuestion = (req, res) => {
                 err.toString().includes("password") ||
                 err.toString().includes("Password") ||
                 err.toString().includes("credentials") ||
-                err.toString().includes("user") ||
+
                 err.toString().includes("Auth")) {
                 res.status(401).send({
                     message: err.toString()
@@ -158,84 +158,82 @@ exports.attachToAnswer = (req, res) => {
                 let currentUserId = creds.username;
                 fetchCurrentUser(currentUserId).then((user) => {
                     getQuestionFromId(qid).then((ques) => {
-                        Answer.findByPk(ansId,{
-                            include: [
-                                {
-                                    model: Question
-                                },
-                                {
-                                    model: User
-                                }
-                            ]
-                        }).then((ans) => {
-                            //TODO: Eliminate extra querying for user and questions as answer Eager query is returning all associations. Also check if params qid == answer's question_id
-                            // console.log("---check eager loading---");
-                            // console.log(ans);
-                            if (ans.user_id != user.id) {
-                                throw new Error("Unauthorized: Only owners of the question are allowed to attach file!");
-                            }
-                            // console.log(req.file);
-                            // res.send();
-                            var file = req.file;
-
-                            let uploadResult = uploadToS3(file, ansId);
-
-                            uploadResult.upload_promise
-                                .then((uploadData) => {
-                                        //Upload done , no error         
-                                        if (uploadData) {
-                                            console.log("Upload Success", uploadData.Location);
-
-                                            let createFileObject = {
-                                                file_id: uploadResult.file_id,
-                                                file_name: file.originalname,
-                                                s3_object_name: uploadResult.s3_obj,
-                                                etag: uploadData.ETag != undefined ? uploadData.ETag : '',
-                                                server_side_encryption: uploadData.ServerSideEncryption != undefined ? uploadData.ServerSideEncryption : '',
-                                                location: uploadData.Location != undefined ? uploadData.Location : '',
-                                                answer_id : ansId
-                                            };
-
-                                            File.create(createFileObject)
-                                                .then((createResult) => {
-                                                    console.log("file inserted in db");
-                                                    let resJson = {
-                                                        file_name: createResult.file_name,
-                                                        s3_object_name: createResult.s3_object_name,
-                                                        file_id : createResult.file_id,
-                                                        created_date : createResult.created_date
-                                                    }
-                                                    res.status(201).send(resJson);
-                                                })
-                                                .catch(err => {
-                                                    console.log(err);
-                                                    res.status(400).send({
-                                                        message: err.toString()
-                                                    });
-                                                });
-                                        }
+                            Answer.findByPk(ansId, {
+                                include: [{
+                                        model: Question
                                     },
-                                    (err) => {
-                                        //Error in uploading to S3
-                                        throw err;
+                                    {
+                                        model: User
+                                    }
+                                ]
+                            }).then((ans) => {
+                                //TODO: Eliminate extra querying for user and questions as answer Eager query is returning all associations. Also check if params qid == answer's question_id
+                                // console.log("---check eager loading---");
+                                // console.log(ans);
+                                if (ans.user_id != user.id) {
+                                    throw new Error("Unauthorized: Only owners of the question are allowed to attach file!");
+                                }
+                                // console.log(req.file);
+                                // res.send();
+                                var file = req.file;
+
+                                let uploadResult = uploadToS3(file, ansId);
+
+                                uploadResult.upload_promise
+                                    .then((uploadData) => {
+                                            //Upload done , no error         
+                                            if (uploadData) {
+                                                console.log("Upload Success", uploadData.Location);
+
+                                                let createFileObject = {
+                                                    file_id: uploadResult.file_id,
+                                                    file_name: file.originalname,
+                                                    s3_object_name: uploadResult.s3_obj,
+                                                    etag: uploadData.ETag != undefined ? uploadData.ETag : '',
+                                                    server_side_encryption: uploadData.ServerSideEncryption != undefined ? uploadData.ServerSideEncryption : '',
+                                                    location: uploadData.Location != undefined ? uploadData.Location : '',
+                                                    answer_id: ansId
+                                                };
+
+                                                File.create(createFileObject)
+                                                    .then((createResult) => {
+                                                        console.log("file inserted in db");
+                                                        let resJson = {
+                                                            file_name: createResult.file_name,
+                                                            s3_object_name: createResult.s3_object_name,
+                                                            file_id: createResult.file_id,
+                                                            created_date: createResult.created_date
+                                                        }
+                                                        res.status(201).send(resJson);
+                                                    })
+                                                    .catch(err => {
+                                                        console.log(err);
+                                                        res.status(400).send({
+                                                            message: err.toString()
+                                                        });
+                                                    });
+                                            }
+                                        },
+                                        (err) => {
+                                            //Error in uploading to S3
+                                            throw err;
+                                        });
+                            }).catch(err => {
+                                // console.log(err);
+                                if (err.toString().includes('Unauthorized')) {
+                                    res.status(401).send({
+                                        message: err.toString()
                                     });
-                                }).catch(err => {
-                                    // console.log(err);
-                                    if (err.toString().includes('Unauthorized')) {
-                                        res.status(401).send({
-                                            message: err.toString()
-                                        });
-                                    }
-                                     else if (err.toString().includes('not found')) {
-                                        res.status(404).send({
-                                            message: err.toString()
-                                        });
-                                    } else {
-                                        res.status(400).send({
-                                            message: err.toString()
-                                        });
-                                    }
-                                });
+                                } else if (err.toString().includes('not found')) {
+                                    res.status(404).send({
+                                        message: err.toString()
+                                    });
+                                } else {
+                                    res.status(400).send({
+                                        message: err.toString()
+                                    });
+                                }
+                            });
 
                         })
                         .catch((err) => {
@@ -278,7 +276,7 @@ exports.attachToAnswer = (req, res) => {
                 err.toString().includes("password") ||
                 err.toString().includes("Password") ||
                 err.toString().includes("credentials") ||
-                err.toString().includes("user") ||
+
                 err.toString().includes("Auth")) {
                 res.status(401).send({
                     message: err.toString()
@@ -292,6 +290,266 @@ exports.attachToAnswer = (req, res) => {
         });
 
 
+}
+
+
+//---------------Delete question attachment-------------------------------------------------
+
+exports.deleteQuestionFile = (req, res) => {
+    let qid = req.params.question_id;
+    let fileId = req.params.file_id;
+    auth.authenticateCredentials(req.headers.authorization)
+        .then((resultObj) => {
+            if (resultObj.auth != undefined && resultObj.auth == true) {
+                //All good, authenticated!
+                console.log(resultObj + " Authenticated!");
+
+                //get file by pk and include question, nested include question's user, compare + check
+                File.findByPk(fileId, {
+                        include: {
+                            model: Question,
+                            include: {
+                                model: User
+                            }
+                        }
+                    }).then((queryData) => {
+                        // console.log(queryData.dataValues);
+                        // console.log(queryData.question.dataValues);
+                        // console.log(queryData.question.user.dataValues);
+                        if(queryData==undefined || queryData==null){
+                            throw new Error("Unable to retrieve the file. Please check file id and other details");
+                        }
+                        if(queryData.question==undefined || queryData.question == null){
+                            throw new Error("There is no question associated with this file!");
+                        }
+                        //check if the user is authorized
+                        if (queryData.question.user.dataValues.username == resultObj.cred.username) {
+                            console.log("user is authorized to delete!");
+                            //check if question id is correct
+                            if (queryData.question.question_id == qid) {
+                                // console.log("correct question!")
+                                //proceed to delete!
+                                console.log("deleting" + queryData.s3_object_name);
+                                deleteS3Object(queryData.s3_object_name)
+                                    .then((deleteData) => {
+                                        console.log(deleteData);
+                                        console.log("object deleted!");
+                                        File.destroy({
+                                            where: {
+                                                file_id: fileId
+                                            }
+                                        }).then(num => {
+                                            console.log(num);
+                                            if (num == 1) {
+                                                //deleted successfully
+                                                res.status(204).send();
+                                            } else {
+                                                //could not delete. maybe question not found
+                                                throw new Error(`Could not delete the File with id=${fileId}`);
+                                            }
+                                        });
+                                    });
+                            } else {
+                                throw new Error("This file isn't associated with given question. Please check question id!");
+                            }
+                        } else {
+                            console.log("not allowed to delete!");
+                            throw new Error("Unauthorized : This user is not allowed to delete this file!");
+                        }
+
+
+                    })
+                    .catch((err) => {
+                        console.log("error---" + err);
+                        if (err.toString().includes("username") ||
+                            err.toString().includes("Username") ||
+                            err.toString().includes("password") ||
+                            err.toString().includes("Password") ||
+
+                            err.toString().includes("credentials") ||
+
+                            err.toString().includes('Unauthorized') ||
+                            err.toString().includes("Auth")) {
+                            res.status(401).send({
+                                message: err.toString()
+                            });
+                        } else if (err.toString().includes('not found')) {
+                            res.status(404).send({
+                                message: err.toString()
+                            });
+                        } else {
+                            res.status(400).send({
+                                message: err.toString()
+                            });
+
+                        }
+                    });
+
+            } else {
+                // return res.status(400).send({
+                throw new Error("Error: Please check the credentials");
+                // });
+            }
+        })
+        .catch((err) => {
+            console.log("error---" + err);
+            if (err.toString().includes("username") ||
+                err.toString().includes("Username") ||
+                err.toString().includes("password") ||
+                err.toString().includes("Password") ||
+
+                err.toString().includes("credentials") ||
+
+                err.toString().includes('Unauthorized') ||
+                err.toString().includes("Auth")) {
+                res.status(401).send({
+                    message: err.toString()
+                });
+            } else if (err.toString().includes('not found')) {
+                res.status(404).send({
+                    message: err.toString()
+                });
+            } else {
+                res.status(400).send({
+                    message: err.toString()
+                });
+
+            }
+        });
+}
+
+
+//---------------Delete answer attachment-------------------------------------------------
+
+exports.deleteAnswerFile = (req, res) => {
+    let qid = req.params.question_id;
+    let fileId = req.params.file_id;
+    let ansId = req.params.answer_id;
+    auth.authenticateCredentials(req.headers.authorization)
+        .then((resultObj) => {
+            if (resultObj.auth != undefined && resultObj.auth == true) {
+                //All good, authenticated!
+                console.log(resultObj + " Authenticated!");
+
+                //get file by pk and include question, nested include question's user, compare + check
+                File.findByPk(fileId, {
+                        include: {
+                            model: Answer,
+                            include: [{
+                                    model: User
+                                },
+                                {
+                                    model: Question
+                                }
+                            ]
+                        }
+                    }).then((queryData) => {
+                        // console.log(queryData.dataValues);
+                        // console.log(queryData.question.dataValues);
+                        // console.log(queryData.question.user.dataValues);
+                        if(queryData==undefined || queryData==null){
+                            throw new Error("Unable to retrieve the file. Please check file id and other details");
+                        }
+                        if(queryData.answer==undefined || queryData.answer == null){
+                            throw new Error("There is no answer associated with this file!");
+                        }
+                        //check if the user is authorized
+                        if (queryData.answer.user.dataValues.username == resultObj.cred.username) {
+                            console.log("user is authorized to delete!");
+                            //check if question id is correct
+                            if (queryData.answer.answer_id == ansId) {
+                                if (queryData.answer.question.question_id != qid) {
+                                    throw new Error("This question id isn't associated with given answer. Please check question id!");
+                                }
+                                // console.log("correct question!")
+                                //proceed to delete!
+                                console.log("deleting" + queryData.s3_object_name);
+                                deleteS3Object(queryData.s3_object_name)
+                                    .then((deleteData) => {
+                                        console.log("object deleted!");
+                                        console.log(deleteData);
+                                        File.destroy({
+                                            where: {
+                                                file_id: fileId
+                                            }
+                                        }).then(num => {
+                                            console.log(num);
+                                            if (num == 1) {
+                                                //deleted successfully
+                                                res.status(204).send();
+                                            } else {
+                                                //could not delete. maybe question not found
+                                                throw new Error(`Could not delete the File with id=${fileId}`);
+                                            }
+                                        });
+                                    });
+                            } else {
+                                throw new Error("This file isn't associated with given answer. Please check answer id!");
+                            }
+                        } else {
+                            console.log("not allowed to delete!");
+                            throw new Error("Unauthorized : This user is not allowed to delete this file!");
+                        }
+
+
+                    })
+                    .catch((err) => {
+                        console.log("error---" + err);
+                        if (err.toString().includes("username") ||
+                            err.toString().includes("Username") ||
+                            err.toString().includes("password") ||
+                            err.toString().includes("Password") ||
+
+                            err.toString().includes("credentials") ||
+
+                            err.toString().includes('Unauthorized') ||
+                            err.toString().includes("Auth")) {
+                            res.status(401).send({
+                                message: err.toString()
+                            });
+                        } else if (err.toString().includes('not found')) {
+                            res.status(404).send({
+                                message: err.toString()
+                            });
+                        } else {
+                            res.status(400).send({
+                                message: err.toString()
+                            });
+
+                        }
+                    });
+
+            } else {
+                // return res.status(400).send({
+                throw new Error("Error: Please check the credentials");
+                // });
+            }
+        })
+        .catch((err) => {
+            console.log("error---" + err);
+            if (err.toString().includes("username") ||
+                err.toString().includes("Username") ||
+                err.toString().includes("password") ||
+                err.toString().includes("Password") ||
+
+                err.toString().includes("credentials") ||
+
+                err.toString().includes('Unauthorized') ||
+                err.toString().includes("Auth")) {
+                res.status(401).send({
+                    message: err.toString()
+                });
+            } else if (err.toString().includes('not found')) {
+                res.status(404).send({
+                    message: err.toString()
+                });
+            } else {
+                res.status(400).send({
+                    message: err.toString()
+                });
+
+            }
+        });
 }
 
 //TODO: use env
@@ -345,6 +603,25 @@ function uploadToS3(file, modelId) {
     return returnObj;
 }
 
+function deleteS3Object(file) {
+    AWS.config.update({
+        accessKeyId: 'AKIARBIX7ML74LJOY4ND',
+        secretAccessKey: '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',
+        region: 'us-east-1'
+    });
+
+    // Create S3 service object
+    s3 = new AWS.S3({
+        apiVersion: '2006-03-01'
+    });
+
+    var params = {
+        Bucket: 'webapp.sanket.pimple',
+        Key: file
+    };
+
+    return s3.deleteObject(params).promise();
+}
 async function getQuestionFromId(qid) {
 
     let ques = await Question.findOne({

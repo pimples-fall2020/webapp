@@ -48,4 +48,8 @@ var upload = multer();
 
     router.post("/:question_id/answer/:answer_id/file", upload.single('photos'), fileController.attachToAnswer);
 
+    router.delete("/:question_id/file/:file_id", fileController.deleteQuestionFile);
+
+    router.delete("/:question_id/answer/:answer_id/file/:file_id", fileController.deleteAnswerFile);
+
 module.exports = router;
