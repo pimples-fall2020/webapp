@@ -2,7 +2,6 @@ let dbConfig;
 if (process.env.IS_EC2 == true) {
   dbConfig = require("../config/db.config-ec2.js");
 } else {
-
   dbConfig = require("../config/db.config.js");
 }
 
@@ -34,11 +33,13 @@ db.user = require("./user.model.js")(sequelize, Sequelize);
 db.question = require("./question.model.js")(sequelize, Sequelize);
 db.answer = require("./answer.model.js")(sequelize, Sequelize);
 db.category = require("./category.model.js")(sequelize, Sequelize);
+db.file = require("./file.model.js")(sequelize, Sequelize);
 //--------Associations-----------
 const User = db.user;
 const Question = db.question;
 const Answer = db.answer;
 const Category = db.category;
+const File = db.file;
 //1) User-question
 User.hasMany(Question, {
   foreignKey: 'user_id'
@@ -47,7 +48,7 @@ Question.belongsTo(User, {
   foreignKey: 'user_id'
 });
 
-//2) Question-answer
+//2) Question-answer -- one-to-many
 Question.hasMany(Answer, {
   foreignKey: 'question_id'
 });
@@ -55,7 +56,7 @@ Answer.belongsTo(Question, {
   foreignKey: 'question_id'
 });
 
-//3) User-answer
+//3) User-answer -- one-to-many
 User.hasMany(Answer, {
   foreignKey: 'user_id'
 });
@@ -69,6 +70,22 @@ Question.belongsToMany(Category, {
 });
 Category.belongsToMany(Question, {
   through: 'question_categories_mapping'
+});
+
+// 5) Question-files -- one-to-many
+Question.hasMany(File, {
+  foreignKey: 'question_id'
+});
+File.belongsTo(Question, {
+  foreignKey: 'question_id'
+});
+
+// Answer-files -- one to many
+Answer.hasMany(File, {
+  foreignKey: 'answer_id'
+});
+File.belongsTo(Answer, {
+  foreignKey: 'answer_id'
 });
 
 module.exports = db;

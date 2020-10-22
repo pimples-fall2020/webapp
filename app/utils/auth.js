@@ -121,7 +121,7 @@ function getCredentialsFromAuth(authHeader) {
 //             if (resultObj.auth != undefined && resultObj.auth == true) {
 //                 //All good, authenticated!
 //                 console.log(resultObj + " Authenticated!");
-                
+
 //             } else {
 //                 // return res.status(400).send({
 //                 throw new Error("Error: Please check the credentials");
@@ -134,6 +134,7 @@ function getCredentialsFromAuth(authHeader) {
 //                 err.toString().includes("Username") ||
 //                 err.toString().includes("password") ||
 //                 err.toString().includes("Password") ||
+//                 err.toString().includes("fetch") ||
 //                 err.toString().includes("credentials") ||
 //                 err.toString().includes("user") ||
 //                 err.toString().includes("Auth")) {

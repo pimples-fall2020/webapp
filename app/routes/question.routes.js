@@ -1,6 +1,14 @@
-// module.exports = app => {
+/**
+ * Routes for Questions, Answers and Files
+ * 
+ */
+var multer  = require('multer');
+var upload = multer();
+// ----------------------QUESTIONS--------------------------------
+    
     const questionController = require("../controllers/question.controller.js");
     const answerController = require("../controllers/answer.controller.js");
+    const fileController = require("../controllers/file.controller.js");
 
     var router = require("express").Router();
   
@@ -18,6 +26,8 @@
     
     //get question by id
     router.get("/:question_id", questionController.getQuestionById);
+
+
     //-----------------ANSWERS-------------------------
 
     //Answer a question
@@ -31,5 +41,11 @@
 
     // get an answer
     router.get("/:question_id/answer/:answer_id", answerController.getAnswerFromId);
+
+    // ---------------------------FILES--------------------------------------------
+
+    router.post("/:question_id/file", upload.single('photos'), fileController.attachToQuestion);
+
+    router.post("/:question_id/answer/:answer_id/file", upload.single('photos'), fileController.attachToAnswer);
 
 module.exports = router;
