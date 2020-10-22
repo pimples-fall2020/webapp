@@ -2,6 +2,7 @@ const db = require("../models");
 const Question = db.question;
 const Answer = db.answer;
 const User = db.user;
+const File = db.file;
 const auth = require('../utils/auth');
 var payloadChecker = require('payload-validator');
 var currentUserId;
@@ -37,6 +38,7 @@ exports.postAnswer = (req, res) => {
                                     Answer.create(createAnswerObj)
                                         .then((data) => {
                                             console.log(data.dataValues);
+                                            data.dataValues.attachments = [];
                                             let createdAnswer = {
                                                 message: "Answer Posted",
                                                 data: data.dataValues
@@ -365,22 +367,43 @@ exports.deleteAnswer = (req, res) => {
 
 // --------------------GET ANSWER FROM ID -----------------------------
 exports.getAnswerFromId = (req, res) => {
-    //TODO: Error handling for wrong ids
+    //TODO: Error handling for wrong question ids
     let qid = req.params.question_id;
     let ansId = req.params.answer_id;
 
     Answer.findOne({
         where: {
             answer_id: ansId
+        },
+        include: {
+            model: File
         }
     }).then(ans => {
         if(ans==undefined || ans==null) {
             throw new Error("Answer not found, wrong ID!")
         }
-        res.send(ans.get({
-            plain: true
-        }));
+        let ansObj = ans.dataValues;
+        console.log(ansObj);
+        ans = ansObj;
+        let attachments = [];
+        // attachments = ans.files;
+        ans.files.forEach(file => {
+            let obj = {
+                file_name : file.file_name,
+                s3_object_name: file.s3_object_name,
+                file_id: file.file_id,
+                created_date: file.created_date  
+            };
+            attachments.push(obj);
+        });
+        ans.attachments = attachments;
+        delete ans.files;
+        // res.send(ans.get({
+        //     plain: true
+        // }));
+        res.send(ans);
     }).catch(err => {
+        console.log(err);
         res.status(404).send({
             message: "Unable to get the answer from if, please check the id!"
         });

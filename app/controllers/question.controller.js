@@ -3,6 +3,7 @@ const Question = db.question;
 const Category = db.category;
 const Answer = db.answer;
 const User = db.user;
+const File = db.file;
 const sequelize = db.sequelize;
 const auth = require('../utils/auth');
 var payloadChecker = require('payload-validator');
@@ -59,8 +60,8 @@ exports.create = (req, res) => {
                                 //     console.log(err);
                                 // });
                                 let insertedQues = createdQues.dataValues;
-                                insertedQues.answers = [];
-
+                                insertedQues.answers = [];                                
+                                insertedQues.attachments = [];
                                 // Add categories
                                 if (categories != undefined & categories != null) {
 
@@ -544,11 +545,35 @@ exports.getAllQuestions = (req, res) => {
                     }
                 },
                 // Category,         
-                Answer
+                {
+                    model: Answer,
+                    include: {
+                        model: File,
+                        // as: 'attachments',
+                        attributes: [
+                            'file_name',
+                            's3_object_name',
+                            'file_id',
+                            'created_date'
+                        ]
+                    }
+                },
+                {
+                    model: File,
+                    // as: 'attachments',
+                    attributes: [
+                        'file_name',
+                        's3_object_name',
+                        'file_id',
+                        'created_date'
+                    ]
+                }
+
             ]
         })
         .then((questions) => {
             // console.log(questions);
+            let respJson = [];
             questions.forEach(ques => {
                 // console.log(ques.dataValues);
                 // ques.categories.forEach(cat=> {
@@ -562,10 +587,18 @@ exports.getAllQuestions = (req, res) => {
                 ques = ques.get({
                     plain: true
                 });
+                ques.attachments = ques.files;
+                delete ques.files;
+                ques.answers.forEach(ans =>{
+                    ans.attachments = ans.files;
+                    delete ans.files;
+                });
+                
                 console.log(ques);
+                respJson.push(ques);
             });
 
-            res.send(questions);
+            res.send(respJson);
 
         });
 
@@ -586,14 +619,48 @@ exports.getQuestionById = (req, res) => {
                     }
                 },
                 // Category,         
-                Answer
+                {
+                    model: Answer,
+                    include: {
+                        model: File,
+                        // as: 'attachments',
+                        attributes: [
+                            'file_name',
+                            's3_object_name',
+                            'file_id',
+                            'created_date'
+                        ]
+                    }
+                },
+                {
+                    model: File,
+                    // as: 'attachments',
+                    attributes: [
+                        'file_name',
+                        's3_object_name',
+                        'file_id',
+                        'created_date'
+                    ]
+                }
+
             ]
         })
         .then((question) => {
             question = question.get({
                 plain: true
             });
-            console.log(question);
+
+            question.attachments = question.files;
+            delete question.files;
+            question.answers.forEach(ans =>{
+                ans.attachments = ans.files;
+                delete ans.files;
+            });
+            
+            // console.log(ques);
+            // respJson.push(ques);
+
+            // console.log(question);
 
             res.send(question);
 
