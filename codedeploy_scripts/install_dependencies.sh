@@ -6,5 +6,5 @@
 # sudo apt-get install -y build-essential
 
 # npm install -g pm2
-cd /home/ubuntu/
+cd /home/ubuntu/webapp
 sudo npm install
