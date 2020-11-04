@@ -2,6 +2,7 @@
 name: Build and Deploy Webapp
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the master branch
+# This file will have secrets and credentials for cicd user
 env:
   ARTIFACT_NAME: csye6225-webapp-${{ github.run_number }}.zip
   CODEDEPLOY_APPLICATION_NAME: ${{secrets.CODEDEPLOY_APPLICATION_NAME}}
