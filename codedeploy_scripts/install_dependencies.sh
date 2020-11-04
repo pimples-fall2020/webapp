@@ -7,4 +7,4 @@
 
 # npm install -g pm2
 cd /home/ubuntu/webapp
-sudo npm install
+sudo npm i --unsafe-perm=true --allow-root
