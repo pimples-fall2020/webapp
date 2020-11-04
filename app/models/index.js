@@ -1,5 +1,5 @@
 let dbConfig;
-console.log("is ec2:"+process.env.IS_EC2);
+
 if (process.env.IS_EC2 == `true`) {
   console.log("Connecting to RDS...");
   dbConfig = require("../config/db.config-ec2.js");
