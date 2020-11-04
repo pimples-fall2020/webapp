@@ -10,7 +10,7 @@ env:
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -52,4 +52,20 @@ jobs:
       - name: Copy Artifact to S3
         run: |
           aws s3 sync ./codedeploy_artifact s3://${{ secrets.S3_CODEDEPLOY_BUCKET }}
-          
+
+      - name: Deploy app to CodeDeploy
+        run: |
+          output=$(aws deploy create-deployment \
+              --application-name ${{ env.CODEDEPLOY_APPLICATION_NAME }} \
+              --deployment-config-name CodeDeployDefault.AllAtOnce \
+              --deployment-group-name ${{ env.CODEDEPLOY_APPLICATION_DEPLOYMENT_GROUP_NAME }} \
+              --description "Webapp deployment" \
+              --s3-location bucket=${{ secrets.S3_CODEDEPLOY_BUCKET }},bundleType=zip,key=${{ env.ARTIFACT_NAME }} \
+              --region ${{ env.AWS_REGION }} \
+              --output json)
+
+              echo $output
+
+              dId=$(echo $output | jq -r '.deploymentId')
+
+              aws deploy wait deployment-successful --deployment-id $dId
