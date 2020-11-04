@@ -3,7 +3,7 @@ os: linux
 
 files:
   - source: /
-    destination: ~/webapp
+    destination: /home/ubuntu/webapp
 
 hooks:
   BeforeInstall:
