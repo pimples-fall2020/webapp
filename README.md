@@ -66,3 +66,5 @@ PS: This project has been setup with AWS for storage, DB and CI/CD
 *MS Information Systems (2019-2020),*
 
 *Northeastern University, Boston*
+
+CICD
