@@ -8,11 +8,11 @@ const myFormat = printf(({ level, message, timestamp }) => {
 const logger = winston.createLogger({
     // level: 'info',
     // format: winston.format.json(),
-    // format: winston.format.simple(),
-    format: combine(        
-        timestamp(),
-        myFormat
-      ),
+    format: winston.format.simple(),
+    // format: combine(        
+    //     timestamp(),
+    //     myFormat
+    //   ),
     // defaultMeta: { service: 'user-service' },
     
     transports: [
@@ -26,7 +26,6 @@ const logger = winston.createLogger({
         })
     ]
 });
-
 //
 // If we're not in production then log to the `console` with the format:
 // `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
