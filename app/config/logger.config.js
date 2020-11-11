@@ -1,10 +1,20 @@
 const winston = require('winston');
+const { createLogger, format, transports } = require('winston');
+const { combine, timestamp, label, printf } = format;
+const myFormat = printf(({ level, message, timestamp }) => {
+    return `${timestamp} ${level}: ${message}`;
+  });
 
 const logger = winston.createLogger({
     // level: 'info',
     // format: winston.format.json(),
-    format: winston.format.simple(),
+    // format: winston.format.simple(),
+    format: combine(        
+        timestamp(),
+        myFormat
+      ),
     // defaultMeta: { service: 'user-service' },
+    
     transports: [
         //
         // - Write all logs with level `error` and below to `error.log`
