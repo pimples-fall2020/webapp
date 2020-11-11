@@ -8,3 +8,13 @@
 # npm install -g pm2
 cd /home/ubuntu/webapp
 sudo npm i --unsafe-perm=true --allow-root
+#This is for the changing the permision
+
+# # Delete already existing file
+# if [-f "./cloudwatch-config.json"]; then
+# rm -rf ./cloudwatch-config.json
+# fi
+
+$FILE=./cloudwatch-config.json
+
+sudo chmod +x cloudwatch-config.json
