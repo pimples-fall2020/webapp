@@ -10,8 +10,7 @@
                     {
                         "file_path": "/home/ubuntu/webapp/csye6225-webapp.log",
                         "log_group_name": "csye6225",
-                        "log_stream_name": "webapp",
-                        "timezone": "UTC"
+                        "log_stream_name": "webapp"                        
                     }
                 ]
             }
