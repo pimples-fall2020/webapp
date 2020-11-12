@@ -6,8 +6,12 @@ const File = db.file;
 const auth = require('../utils/auth');
 var payloadChecker = require('payload-validator');
 var currentUserId;
+let StatsD = require('node-statsd');
+let statsDclient = new StatsD();
+let startTime, endTime;
 
 exports.postAnswer = (req, res) => {
+    statsDclient.increment('create_answer_counter');
     let qid = req.params.question_id;
     //TODO: Simplify the nested promises below!!!!!!
     auth.authenticateCredentials(req.headers.authorization)
@@ -100,6 +104,7 @@ exports.postAnswer = (req, res) => {
 //----------------update the answer--------------------------------
 //TODO: Simplify the nested promises below!!!!!!
 exports.updateAnswer = (req, res) => {
+    statsDclient.increment('update_answer_counter');
     let qid = req.params.question_id;
     let ansId = req.params.answer_id;
 
@@ -244,6 +249,7 @@ exports.updateAnswer = (req, res) => {
 //--------------------------------DELETE AN ANSWER-------------------------------------------------
 
 exports.deleteAnswer = (req, res) => {
+    statsDclient.increment('delete_answer_counter');
     let qid = req.params.question_id;
     let ansId = req.params.answer_id;
 
@@ -367,6 +373,7 @@ exports.deleteAnswer = (req, res) => {
 
 // --------------------GET ANSWER FROM ID -----------------------------
 exports.getAnswerFromId = (req, res) => {
+    statsDclient.increment('get_answer_counter');
     //TODO: Error handling for wrong question ids
     let qid = req.params.question_id;
     let ansId = req.params.answer_id;

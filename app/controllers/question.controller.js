@@ -13,10 +13,14 @@ const {
 } = require("../models");
 var currentUserId;
 var currentUser;
+let StatsD = require('node-statsd');
+let statsDclient = new StatsD();
+let startTime, endTime;
+
 //TODO: Check all catch blocks and add response errors there
 // ------------Create a question-------------------------------------------
 exports.create = (req, res) => {
-
+    statsDclient.increment('create_question_counter');
     const expectedPayload = {
         "question_text": ""
         // "categories": [
@@ -212,6 +216,7 @@ exports.create = (req, res) => {
 //  wrong qid - TypeError: Cannot read property 'countAnswers' of null
 // Only the user who posted the question can update or delete the question.
 exports.deleteQuestion = (req, res) => {
+    statsDclient.increment('delete_question_counter');
     let qid = req.params.question_id;
 
     //perform auth
@@ -431,6 +436,7 @@ exports.deleteQuestion = (req, res) => {
 //---------update a question---------------------
 // The user who posted question can update or delete question categories.
 exports.updateQuestionPut = (req, res) => {
+    statsDclient.increment('update_question_counter');
     let qid = req.params.question_id;
     let fetchedQuestion;
     auth.authenticateCredentials(req.headers.authorization)
@@ -624,6 +630,7 @@ exports.updateQuestionPut = (req, res) => {
 
 // Get questions and their data
 exports.getAllQuestions = (req, res) => {
+    statsDclient.increment('get_all_questions_counter');
     //TODO: Error handling
     Question.findAll({
             include: [{
@@ -701,6 +708,7 @@ exports.getAllQuestions = (req, res) => {
 
 //Get a question by id
 exports.getQuestionById = (req, res) => {
+    statsDclient.increment('get_question_by_id_counter');
     let qid = req.params.question_id;
     Question.findOne({
             where: {

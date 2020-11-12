@@ -104,6 +104,7 @@ exports.create = (req, res) => {
  */
 exports.findSelf = (req, res) => {
 
+  statsDclient.increment('get_self_user_counter');
   //--------check for empty table--------
   isTableNotEmpty(User).then(() => {
     //nothing
@@ -173,6 +174,7 @@ exports.findSelf = (req, res) => {
 
 exports.updateUserPut = (req, res) => {
 
+  statsDclient.increment('user_update_counter');
   //--------check for empty table--------
   isTableNotEmpty(User).then(() => {
     //nothing
@@ -316,6 +318,7 @@ exports.updateUserPut = (req, res) => {
 
 
 exports.getUserById = (req, res) => {
+  statsDclient.increment('get_user_bu_id_counter');
   let user_id = req.params.user_id;
 
   User.findByPk(user_id).then((user) => {
