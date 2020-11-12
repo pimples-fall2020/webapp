@@ -8,9 +8,9 @@ const commonPasswordList = require('fxa-common-password-list');
 
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
-var StatsD = require('node-statsd'),
-statsDclient = new StatsD();
-var startTime, endTime;
+var StatsD = require('node-statsd');
+var statsDclient = new StatsD();
+const statsDutil = require('../utils/statsd.utils');
 
 //TODO: Fix and review all the error codes and error messages below. handle more cases!!! There are always more cases to handle!
 
@@ -39,7 +39,10 @@ exports.create = (req, res) => {
     validateUserRequestFull(req.body, true);
 
   } catch (error) {
-
+    // endTime = Date.now();
+    // let timing = endTime - startTime;
+    // statsDclient.timing('user_create_api_time', timing);
+    statsDutil.stopTimer(startTime, statsDclient, 'user_create_api_time');
     return res.status(400).json({
       message: error.toString()
     });
@@ -48,6 +51,9 @@ exports.create = (req, res) => {
   let pass = req.body.password;
   bcrypt.hash(pass, saltRounds, (err, hash) => { //hash the password
     if (err) {
+      // let timing = endTime - startTime;
+      // statsDclient.timing('user_create_api_time', timing);
+      statsDutil.stopTimer(startTime, statsDclient, 'user_create_api_time');
       return res.status(400).json({
         message: "Error occurred while password encryption:" + err.message
       });
@@ -69,12 +75,15 @@ exports.create = (req, res) => {
             message: "User Created!",
             data: resp
           });
-          endTime = Date.now();
-          let timing =endTime-startTime;
-          statsDclient.timing('user_create_time', timing);
+          // endTime = Date.now();
+          // let timing = endTime - startTime;
+          // statsDclient.timing('user_create_api_time', timing);
+          statsDutil.stopTimer(startTime, statsDclient, 'user_create_api_time');
         })
         .catch((err) => {
-
+          // let timing = endTime - startTime;
+          // statsDclient.timing('user_create_api_time', timing);
+          statsDutil.stopTimer(startTime, statsDclient, 'user_create_api_time');
           console.log(err.errors[0].message);
           if (err.errors[0].message == 'username must be unique') {
             res.status(400).send({
@@ -103,12 +112,15 @@ exports.create = (req, res) => {
  * @param {JSON} res 
  */
 exports.findSelf = (req, res) => {
-
+  startTime = Date.now();
   statsDclient.increment('get_self_user_counter');
   //--------check for empty table--------
   isTableNotEmpty(User).then(() => {
     //nothing
   }).catch((err) => {
+    // let timing = endTime - startTime;
+    // statsDclient.timing('user_getself_api_time', timing);
+    statsDutil.stopTimer(startTime, statsDclient, 'user_getself_api_time');
     res.status(400).send({
       message: err.toString()
     });
@@ -120,6 +132,9 @@ exports.findSelf = (req, res) => {
     //-----------check if credentials are empty    
     validateBasicAuth(cred);
   } catch (error) {
+    // let timing = endTime - startTime;
+    // statsDclient.timing('user_getself_api_time', timing);
+    statsDutil.stopTimer(startTime, statsDclient, 'user_getself_api_time');
     return res.status(400).send({
       message: error.toString()
     });
@@ -143,27 +158,42 @@ exports.findSelf = (req, res) => {
                 },
               })
               .then((data) => {
+                // let timing = endTime - startTime;
+                // statsDclient.timing('user_getself_api_time', timing);
+                statsDutil.stopTimer(startTime, statsDclient, 'user_getself_api_time');
                 res.send(data);
               })
               .catch((err) => {
+                // let timing = endTime - startTime;
+                // statsDclient.timing('user_getself_api_time', timing);
+                statsDutil.stopTimer(startTime, statsDclient, 'user_getself_api_time');
                 res.status(400).send({
                   message: err.toString(),
                 });
               });
           } else {
             //wrong password
+            // let timing = endTime - startTime;
+            // statsDclient.timing('user_getself_api_time', timing);
+            statsDutil.stopTimer(startTime, statsDclient, 'user_getself_api_time');
             return res.status(401).send({
               message: "Error: Wrong password",
             });
           }
         })
         .catch((err) => {
+          // let timing = endTime - startTime;
+          // statsDclient.timing('user_getself_api_time', timing);
+          statsDutil.stopTimer(startTime, statsDclient, 'user_getself_api_time');
           res.status(400).send({
             message: "Error occurred:" + err,
           });
         });
     })
     .catch((err) => {
+      // let timing = endTime - startTime;
+      // statsDclient.timing('user_getself_api_time', timing);
+      statsDutil.stopTimer(startTime, statsDclient, 'user_getself_api_time');
       res.status(401).send({
         message: err.toString(),
       });
@@ -174,11 +204,15 @@ exports.findSelf = (req, res) => {
 
 exports.updateUserPut = (req, res) => {
 
+  startTime = Date.now();
   statsDclient.increment('user_update_counter');
   //--------check for empty table--------
   isTableNotEmpty(User).then(() => {
     //nothing
   }).catch((err) => {
+    // let timing = endTime - startTime;
+    // statsDclient.timing('user_update_api_time', timing);
+    statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
     res.status(400).send({
       message: err.toString()
     });
@@ -188,6 +222,9 @@ exports.updateUserPut = (req, res) => {
   try {
     validateBasicAuth(cred);
   } catch (error) {
+    // let timing = endTime - startTime;
+    // statsDclient.timing('user_update_api_time', timing);
+    statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
     return res.status(400).send({
       message: error.toString()
     });
@@ -199,7 +236,9 @@ exports.updateUserPut = (req, res) => {
     validateUserRequestFull(updateObject, true);
 
   } catch (error) {
-
+    // let timing = endTime - startTime;
+    // statsDclient.timing('user_update_api_time', timing);
+    statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
     return res.status(400).json({
       message: error.toString()
     });
@@ -209,6 +248,9 @@ exports.updateUserPut = (req, res) => {
   if ("username" in updateObject) {
 
     if (updateObject.username != cred.username) {
+      // let timing = endTime - startTime;
+      // statsDclient.timing('user_update_api_time', timing);
+      statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
       return res.status(400).send({
         message: "Error: Please specify correct usernames!"
       });
@@ -263,11 +305,17 @@ exports.updateUserPut = (req, res) => {
                       },
                     })
                     .then(() => {
+                      // let timing = endTime - startTime;
+                      // statsDclient.timing('user_update_api_time', timing);
+                      statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
                       res.status(204).send({
                         message: "User Updated successfully"
                       });
                     })
                     .catch((err) => {
+                      // let timing = endTime - startTime;
+                      // statsDclient.timing('user_update_api_time', timing);
+                      statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
                       res.status(400).send({
                         message: err.toString()
                       });
@@ -284,11 +332,17 @@ exports.updateUserPut = (req, res) => {
                   },
                 })
                 .then(() => {
+                  // let timing = endTime - startTime;
+                  // statsDclient.timing('user_update_api_time', timing);
+                  statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
                   res.status(204).send({
                     message: "User Updated successfully"
                   });
                 })
                 .catch((err) => {
+                  // let timing = endTime - startTime;
+                  // statsDclient.timing('user_update_api_time', timing);
+                  statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
                   res.status(400).send({
                     message: err.toString()
                   });
@@ -298,18 +352,27 @@ exports.updateUserPut = (req, res) => {
             }
           } else {
             //wrong password
+            // let timing = endTime - startTime;
+            // statsDclient.timing('user_update_api_time', timing);
+            statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
             return res.status(401).send({
               message: "Error: Wrong password"
             });
           }
         })
         .catch((err) => {
+          // let timing = endTime - startTime;
+          // statsDclient.timing('user_update_api_time', timing);
+          statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
           res.status(400).send({
             message: err.toString()
           });
         });
     })
     .catch((err) => {
+      // let timing = endTime - startTime;
+      // statsDclient.timing('user_update_api_time', timing);
+      statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
       res.status(400).send({
         message: err.toString()
       });
@@ -318,7 +381,8 @@ exports.updateUserPut = (req, res) => {
 
 
 exports.getUserById = (req, res) => {
-  statsDclient.increment('get_user_bu_id_counter');
+  startTime = Date.now();
+  statsDclient.increment('get_user_by_id_counter');
   let user_id = req.params.user_id;
 
   User.findByPk(user_id).then((user) => {
@@ -329,14 +393,17 @@ exports.getUserById = (req, res) => {
         plain: true
       });
       delete foundUser.password;
+      statsDutil.stopTimer(startTime, statsDclient, 'user_getby_id_time');
       res.send(foundUser);
     })
     .catch(err => {
       if (err.toString().includes("found")) {
+        statsDutil.stopTimer(startTime, statsDclient, 'user_getby_id_time');
         res.status(404).send({
           message: err.toString()
         });
       } else {
+        statsDutil.stopTimer(startTime, statsDclient, 'user_getby_id_time');
         res.status(400).send({
           message: "Error:" + err.toString()
         });

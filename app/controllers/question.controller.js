@@ -15,11 +15,13 @@ var currentUserId;
 var currentUser;
 let StatsD = require('node-statsd');
 let statsDclient = new StatsD();
-let startTime, endTime;
+let startApiTime, endApiTime, startDbTime, endDbTime;
+const statsDutil = require('../utils/statsd.utils');
 
 //TODO: Check all catch blocks and add response errors there
 // ------------Create a question-------------------------------------------
 exports.create = (req, res) => {
+    startApiTime = Date.now();
     statsDclient.increment('create_question_counter');
     const expectedPayload = {
         "question_text": ""
@@ -100,6 +102,7 @@ exports.create = (req, res) => {
                                             console.log("--question created--");
                                             console.log(insertedQues);
                                             insertedQues.categories = categoriesValueArr;
+                                            statsDutil.stopTimer(startApiTime, statsDclient, 'create_ques_api_time');
                                             res.status(201).send({
                                                 message: "Question created",
                                                 data: insertedQues
@@ -108,10 +111,12 @@ exports.create = (req, res) => {
                                         }).catch((err) => {
                                             // console.log(err);
                                             if (err.toString().includes('SequelizeUniqueConstraintError')) {
+                                                statsDutil.stopTimer(startApiTime, statsDclient, 'create_ques_api_time');
                                                 res.status(400).send({
                                                     message: "Error: Please do not add duplicate categories in same question!"
                                                 });
                                             } else {
+                                                statsDutil.stopTimer(startApiTime, statsDclient, 'create_ques_api_time');
                                                 res.status(400).send({
                                                     message: err.toString()
                                                 });
@@ -119,6 +124,7 @@ exports.create = (req, res) => {
 
                                         });
                                     }).catch((err) => {
+                                        statsDutil.stopTimer(startApiTime, statsDclient, 'create_ques_api_time');
                                         console.log(err);
                                         res.status(400).send({
                                             message: "Error:" + err.toString()
@@ -157,6 +163,7 @@ exports.create = (req, res) => {
 
                                 } else {
                                     //Body doesn't have any categories
+                                    statsDutil.stopTimer(startApiTime, statsDclient, 'create_ques_api_time');
                                     res.status(201).send({
                                         message: "Question created",
                                         data: insertedQues
@@ -166,6 +173,7 @@ exports.create = (req, res) => {
                             })
                             .catch(err => {
                                 console.log(err);
+                                statsDutil.stopTimer(startApiTime, statsDclient, 'create_ques_api_time');
                                 res.status(400).send({
                                     message: err.toString()
                                 });
@@ -173,6 +181,7 @@ exports.create = (req, res) => {
 
 
                     }).catch(err => {
+                        statsDutil.stopTimer(startApiTime, statsDclient, 'create_ques_api_time');
                         res.status(400).send({
                             message: "Error: Error while fetching user for associating with question"
                         });
@@ -193,6 +202,7 @@ exports.create = (req, res) => {
         })
         .catch((err) => {
             console.log("error---" + err);
+            statsDutil.stopTimer(startApiTime, statsDclient, 'create_ques_api_time');
             if (err.toString().includes("username") ||
                 err.toString().includes("Username") ||
                 err.toString().includes("password") ||
@@ -216,6 +226,7 @@ exports.create = (req, res) => {
 //  wrong qid - TypeError: Cannot read property 'countAnswers' of null
 // Only the user who posted the question can update or delete the question.
 exports.deleteQuestion = (req, res) => {
+    startApiTime = Date.now();
     statsDclient.increment('delete_question_counter');
     let qid = req.params.question_id;
 
@@ -300,6 +311,7 @@ exports.deleteQuestion = (req, res) => {
                                                             console.log(num);
                                                             if (num == 1) {
                                                                 //success
+                                                                statsDutil.stopTimer(startApiTime, statsDclient, 'delete_ques_api_time');
                                                                 res.status(204).send();
                                                             } else {
                                                                 //could not delete. maybe question not found
@@ -308,6 +320,7 @@ exports.deleteQuestion = (req, res) => {
                                                         })
                                                         .catch(err => {
                                                             // console.log(err);
+                                                            statsDutil.stopTimer(startApiTime, statsDclient, 'delete_ques_api_time');
                                                             if (err.toString().includes('not found')) {
                                                                 res.status(404).send({
                                                                     message: err.toString()
@@ -334,6 +347,7 @@ exports.deleteQuestion = (req, res) => {
                                                         console.log(num);
                                                         if (num == 1) {
                                                             //success
+                                                            statsDutil.stopTimer(startApiTime, statsDclient, 'delete_ques_api_time');
                                                             res.status(204).send();
                                                         } else {
                                                             //could not delete. maybe question not found
@@ -342,6 +356,7 @@ exports.deleteQuestion = (req, res) => {
                                                     })
                                                     .catch(err => {
                                                         // console.log(err);
+                                                        statsDutil.stopTimer(startApiTime, statsDclient, 'delete_ques_api_time');
                                                         if (err.toString().includes('not found')) {
                                                             res.status(404).send({
                                                                 message: err.toString()
@@ -359,11 +374,13 @@ exports.deleteQuestion = (req, res) => {
                                             }
                                         }).catch(err => {
                                             console.log(err);
+                                            statsDutil.stopTimer(startApiTime, statsDclient, 'delete_ques_api_time');
                                             res.status(400).send(err.toString());
                                         });
 
                                 })
                                 .catch(err => {
+                                    statsDutil.stopTimer(startApiTime, statsDclient, 'delete_ques_api_time');
                                     if (err.toString().includes('Unauthorized')) {
                                         res.status(401).send({
                                             message: err.toString()
@@ -381,12 +398,14 @@ exports.deleteQuestion = (req, res) => {
                             throw new Error("This question has answers, deletion prohibited!")
                         }
                     }).catch((err) => {
+                        statsDutil.stopTimer(startApiTime, statsDclient, 'delete_ques_api_time');
                         // console.log(err);
                         res.status(400).send({
                             message: err.toString()
                         });
                     });
                 }).catch((err) => {
+                    statsDutil.stopTimer(startApiTime, statsDclient, 'delete_ques_api_time');
                     // console.log(err);
                     if (err.toString().includes('found')) {
                         res.status(404).send({
@@ -412,6 +431,7 @@ exports.deleteQuestion = (req, res) => {
             }
         })
         .catch((err) => {
+            statsDutil.stopTimer(startApiTime, statsDclient, 'delete_ques_api_time');
             console.log("error---" + err);
             if (err.toString().includes("username") ||
                 err.toString().includes("Username") ||
@@ -436,6 +456,7 @@ exports.deleteQuestion = (req, res) => {
 //---------update a question---------------------
 // The user who posted question can update or delete question categories.
 exports.updateQuestionPut = (req, res) => {
+    startApiTime = Date.now();
     statsDclient.increment('update_question_counter');
     let qid = req.params.question_id;
     let fetchedQuestion;
@@ -502,9 +523,11 @@ exports.updateQuestionPut = (req, res) => {
                                                 fetchedQuestion.setCategories(categoriesMappingArr).then((quesCat) => {
                                                     // console.log(quesCat);
                                                     console.log("--mappings created--");
+                                                    statsDutil.stopTimer(startApiTime, statsDclient, 'update_ques_api_time');
                                                     res.status(204).send();
                                                 }).catch((err) => {
                                                     console.log(err);
+                                                    statsDutil.stopTimer(startApiTime, statsDclient, 'update_ques_api_time');
                                                     res.status(400).send({
                                                         message: err.toString()
                                                     });
@@ -521,6 +544,7 @@ exports.updateQuestionPut = (req, res) => {
 
                                         }).catch(err => {
                                             console.log(err);
+                                            statsDutil.stopTimer(startApiTime, statsDclient, 'update_ques_api_time');
                                             if (err.toString().includes('not found')) {
                                                 res.status(404).send({
                                                     message: err.toString()
@@ -533,6 +557,7 @@ exports.updateQuestionPut = (req, res) => {
                                         });
 
                                     }).catch((err) => {
+                                        statsDutil.stopTimer(startApiTime, statsDclient, 'update_ques_api_time');
                                         res.status(400).send({
                                             message: "Error: problem occurred while getting categories, please check request"
                                         });
@@ -549,6 +574,7 @@ exports.updateQuestionPut = (req, res) => {
 
                                         if (num == 1) {
                                             //updated successfully
+                                            statsDutil.stopTimer(startApiTime, statsDclient, 'update_ques_api_time');
                                             res.status(204).send();
 
                                         } else {
@@ -557,6 +583,7 @@ exports.updateQuestionPut = (req, res) => {
                                         }
 
                                     }).catch(err => {
+                                        statsDutil.stopTimer(startApiTime, statsDclient, 'update_ques_api_time');
                                         console.log(err);
                                         if (err.toString().includes('not found')) {
                                             res.status(404).send({
@@ -578,6 +605,7 @@ exports.updateQuestionPut = (req, res) => {
                                 throw new Error("question_text field is mandatory in the request!")
                             }
                         }).catch(err => {
+                            statsDutil.stopTimer(startApiTime, statsDclient, 'update_ques_api_time');
                             if (err.toString().includes('Unauthorized')) {
                                 res.status(401).send({
                                     message: err.toString()
@@ -590,6 +618,7 @@ exports.updateQuestionPut = (req, res) => {
                         });
                     })
                     .catch(err => {
+                        statsDutil.stopTimer(startApiTime, statsDclient, 'update_ques_api_time');
                         console.log(err);
                         if (err.toString().includes('not found')) {
                             res.status(404).send({
@@ -608,6 +637,7 @@ exports.updateQuestionPut = (req, res) => {
             }
         })
         .catch((err) => {
+            statsDutil.stopTimer(startApiTime, statsDclient, 'update_ques_api_time');
             console.log("error---" + err);
             if (err.toString().includes("username") ||
                 err.toString().includes("Username") ||
@@ -630,6 +660,7 @@ exports.updateQuestionPut = (req, res) => {
 
 // Get questions and their data
 exports.getAllQuestions = (req, res) => {
+    startApiTime = Date.now();
     statsDclient.increment('get_all_questions_counter');
     //TODO: Error handling
     Question.findAll({
@@ -698,7 +729,7 @@ exports.getAllQuestions = (req, res) => {
                 console.log(ques);
                 respJson.push(ques);
             });
-
+            statsDutil.stopTimer(startApiTime, statsDclient, 'getall_ques_api_time');
             res.send(respJson);
 
         });
@@ -708,6 +739,7 @@ exports.getAllQuestions = (req, res) => {
 
 //Get a question by id
 exports.getQuestionById = (req, res) => {
+    startApiTime = Date.now();
     statsDclient.increment('get_question_by_id_counter');
     let qid = req.params.question_id;
     Question.findOne({
@@ -769,10 +801,11 @@ exports.getQuestionById = (req, res) => {
             // respJson.push(ques);
 
             // console.log(question);
-
+            statsDutil.stopTimer(startApiTime, statsDclient, 'get_ques_by_id_api_time');
             res.send(question);
 
         }).catch(err => {
+            statsDutil.stopTimer(startApiTime, statsDclient, 'get_ques_by_id_api_time');
             res.status(404).send({
                 message: "Unable to find the question, please check the id"
             });
