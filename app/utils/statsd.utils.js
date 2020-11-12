@@ -4,4 +4,4 @@ function stopTimer(startTime, statsDclient, message){
     statsDclient.timing(message, timing);
 }
 
-module.exports = stopTimer;
+module.exports.stopTimer = stopTimer;

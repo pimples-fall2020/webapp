@@ -10,8 +10,9 @@ const bcrypt = require("bcrypt");
 const saltRounds = 10;
 var StatsD = require('node-statsd');
 var statsDclient = new StatsD();
+var startTime, endTime;
+let startApiTime, endApiTime, startDbTime, endDbTime;
 const statsDutil = require('../utils/statsd.utils');
-
 //TODO: Fix and review all the error codes and error messages below. handle more cases!!! There are always more cases to handle!
 
 
@@ -39,6 +40,7 @@ exports.create = (req, res) => {
     validateUserRequestFull(req.body, true);
 
   } catch (error) {
+    logger.error(error.toString());
     // endTime = Date.now();
     // let timing = endTime - startTime;
     // statsDclient.timing('user_create_api_time', timing);
@@ -51,6 +53,7 @@ exports.create = (req, res) => {
   let pass = req.body.password;
   bcrypt.hash(pass, saltRounds, (err, hash) => { //hash the password
     if (err) {
+      logger.error(err.toString());
       // let timing = endTime - startTime;
       // statsDclient.timing('user_create_api_time', timing);
       statsDutil.stopTimer(startTime, statsDclient, 'user_create_api_time');
@@ -66,11 +69,14 @@ exports.create = (req, res) => {
         username: req.body.username,
       };
 
+      startDbTime = Date.now();
       // Save Tutorial in the database
       User.create(user)
         .then((data) => {
+          statsDutil.stopTimer(startDbTime, statsDclient, 'db_user_create_time');
           let resp = data.dataValues;
           delete resp.password;
+          logger.info("User Created!");
           res.status(201).send({
             message: "User Created!",
             data: resp
@@ -81,6 +87,7 @@ exports.create = (req, res) => {
           statsDutil.stopTimer(startTime, statsDclient, 'user_create_api_time');
         })
         .catch((err) => {
+          statsDutil.stopTimer(startDbTime, statsDclient, 'db_user_create_time');
           // let timing = endTime - startTime;
           // statsDclient.timing('user_create_api_time', timing);
           statsDutil.stopTimer(startTime, statsDclient, 'user_create_api_time');
@@ -89,12 +96,14 @@ exports.create = (req, res) => {
             res.status(400).send({
               message: "Error: The user already exists!",
             });
-
+            logger.error("The user already exists!")
           } else if (err.message == 'Validation isEmail on username failed' || err.message.includes('isEmail')) {
             res.status(400).send({
               message: "Validation Error: Please enter a valid email ID!"
             });
+            logger.error("Validation error");
           } else {
+            logger.error(err.message);
             res.status(400).send({
               message: "Error:" + err.message,
             });
@@ -118,6 +127,7 @@ exports.findSelf = (req, res) => {
   isTableNotEmpty(User).then(() => {
     //nothing
   }).catch((err) => {
+    logger.error(err.toString());
     // let timing = endTime - startTime;
     // statsDclient.timing('user_getself_api_time', timing);
     statsDutil.stopTimer(startTime, statsDclient, 'user_getself_api_time');
@@ -149,6 +159,7 @@ exports.findSelf = (req, res) => {
           // console.log(result);
           console.log("isValid" + result);
           if (result == true) {
+            startDbTime = Date.now();
             User.findOne({
                 where: {
                   username: cred.username,
@@ -158,12 +169,16 @@ exports.findSelf = (req, res) => {
                 },
               })
               .then((data) => {
+                statsDutil.stopTimer(startDbTime, statsDclient, 'db_user_findself_time');
                 // let timing = endTime - startTime;
                 // statsDclient.timing('user_getself_api_time', timing);
                 statsDutil.stopTimer(startTime, statsDclient, 'user_getself_api_time');
+                logger.info("User found!");
                 res.send(data);
               })
               .catch((err) => {
+                logger.error(err.toString());
+                statsDutil.stopTimer(startDbTime, statsDclient, 'db_user_findself_time');
                 // let timing = endTime - startTime;
                 // statsDclient.timing('user_getself_api_time', timing);
                 statsDutil.stopTimer(startTime, statsDclient, 'user_getself_api_time');
@@ -172,6 +187,7 @@ exports.findSelf = (req, res) => {
                 });
               });
           } else {
+            logger.error("Wrong password!");
             //wrong password
             // let timing = endTime - startTime;
             // statsDclient.timing('user_getself_api_time', timing);
@@ -182,6 +198,7 @@ exports.findSelf = (req, res) => {
           }
         })
         .catch((err) => {
+          logger.error(err.toString());
           // let timing = endTime - startTime;
           // statsDclient.timing('user_getself_api_time', timing);
           statsDutil.stopTimer(startTime, statsDclient, 'user_getself_api_time');
@@ -191,6 +208,7 @@ exports.findSelf = (req, res) => {
         });
     })
     .catch((err) => {
+      logger.error(err.toString());
       // let timing = endTime - startTime;
       // statsDclient.timing('user_getself_api_time', timing);
       statsDutil.stopTimer(startTime, statsDclient, 'user_getself_api_time');
@@ -210,6 +228,7 @@ exports.updateUserPut = (req, res) => {
   isTableNotEmpty(User).then(() => {
     //nothing
   }).catch((err) => {
+    logger.error(err.toString());
     // let timing = endTime - startTime;
     // statsDclient.timing('user_update_api_time', timing);
     statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
@@ -222,6 +241,7 @@ exports.updateUserPut = (req, res) => {
   try {
     validateBasicAuth(cred);
   } catch (error) {
+    logger.error(error.toString());
     // let timing = endTime - startTime;
     // statsDclient.timing('user_update_api_time', timing);
     statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
@@ -236,6 +256,7 @@ exports.updateUserPut = (req, res) => {
     validateUserRequestFull(updateObject, true);
 
   } catch (error) {
+    logger.error(error.toString());
     // let timing = endTime - startTime;
     // statsDclient.timing('user_update_api_time', timing);
     statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
@@ -248,6 +269,7 @@ exports.updateUserPut = (req, res) => {
   if ("username" in updateObject) {
 
     if (updateObject.username != cred.username) {
+      logger.error("Specify correct usernames");
       // let timing = endTime - startTime;
       // statsDclient.timing('user_update_api_time', timing);
       statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
@@ -299,20 +321,25 @@ exports.updateUserPut = (req, res) => {
                 } else {
                   updateObject.password = hash;
                   //update the user here
+                  startDbTime = Date.now();
                   User.update(updateObject, {
                       where: {
                         username: userEmail
                       },
                     })
                     .then(() => {
+                      statsDutil.stopTimer(startDbTime, statsDclient, 'db_user_update_time');
                       // let timing = endTime - startTime;
                       // statsDclient.timing('user_update_api_time', timing);
                       statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
+                      logger.info("User updated successfully");
                       res.status(204).send({
                         message: "User Updated successfully"
                       });
                     })
                     .catch((err) => {
+                      logger.error(err.toString());
+                      statsDutil.stopTimer(startDbTime, statsDclient, 'db_user_update_time');
                       // let timing = endTime - startTime;
                       // statsDclient.timing('user_update_api_time', timing);
                       statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
@@ -324,7 +351,7 @@ exports.updateUserPut = (req, res) => {
               });
             } else {
               //update body doesn't contain password field:
-
+              startDbTime = Date.now();
               //update the user here
               User.update(updateObject, {
                   where: {
@@ -332,14 +359,18 @@ exports.updateUserPut = (req, res) => {
                   },
                 })
                 .then(() => {
+                  statsDutil.stopTimer(startDbTime, statsDclient, 'db_user_update_time');
                   // let timing = endTime - startTime;
                   // statsDclient.timing('user_update_api_time', timing);
                   statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
+                  logger.info("User updated successfully");
                   res.status(204).send({
                     message: "User Updated successfully"
                   });
                 })
                 .catch((err) => {
+                  logger.error(err.toString());
+                  statsDutil.stopTimer(startDbTime, statsDclient, 'db_user_update_time');
                   // let timing = endTime - startTime;
                   // statsDclient.timing('user_update_api_time', timing);
                   statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
@@ -352,6 +383,7 @@ exports.updateUserPut = (req, res) => {
             }
           } else {
             //wrong password
+            logger.error("Wrong password");
             // let timing = endTime - startTime;
             // statsDclient.timing('user_update_api_time', timing);
             statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
@@ -361,6 +393,7 @@ exports.updateUserPut = (req, res) => {
           }
         })
         .catch((err) => {
+          logger.error(err.toString());
           // let timing = endTime - startTime;
           // statsDclient.timing('user_update_api_time', timing);
           statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
@@ -370,6 +403,7 @@ exports.updateUserPut = (req, res) => {
         });
     })
     .catch((err) => {
+      logger.error(err.toString());
       // let timing = endTime - startTime;
       // statsDclient.timing('user_update_api_time', timing);
       statsDutil.stopTimer(startTime, statsDclient, 'user_update_api_time');
@@ -381,11 +415,13 @@ exports.updateUserPut = (req, res) => {
 
 
 exports.getUserById = (req, res) => {
+  logger.info("Getting user from user_id");
   startTime = Date.now();
   statsDclient.increment('get_user_by_id_counter');
   let user_id = req.params.user_id;
-
+  startDbTime = Date.now();
   User.findByPk(user_id).then((user) => {
+    statsDutil.stopTimer(startDbTime, statsDclient, 'db_user_findByPk_time');
       if (user == undefined || user == null) {
         throw new Error("User not found, please check the id");
       }
@@ -394,9 +430,12 @@ exports.getUserById = (req, res) => {
       });
       delete foundUser.password;
       statsDutil.stopTimer(startTime, statsDclient, 'user_getby_id_time');
+      logger.info("User found!");
       res.send(foundUser);
     })
     .catch(err => {
+      logger.error(err.toString());
+      statsDutil.stopTimer(startDbTime, statsDclient, 'db_user_findByPk_time');
       if (err.toString().includes("found")) {
         statsDutil.stopTimer(startTime, statsDclient, 'user_getby_id_time');
         res.status(404).send({

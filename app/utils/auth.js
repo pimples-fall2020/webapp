@@ -2,6 +2,9 @@
 const bcrypt = require("bcrypt");
 const db = require("../models");
 const User = db.user;
+var StatsD = require('node-statsd');
+var statsDclient = new StatsD();
+const statsDutil = require('../utils/statsd.utils');
 
 /**
  * this function currently only checks for empty auth credentials
@@ -22,12 +25,14 @@ function validateBasicAuth(cred) {
 async function getHash(cred) {
     // let hash = null;
     try {
+        let startt = Date.now();
         const data = await User.findAll({
             attributes: ["password"],
             where: {
                 username: cred.username,
             },
         });
+        statsDutil.stopTimer(startt, statsDclient, 'user_findall_time');
         // console.log(data);
         if (data === undefined || data.length == 0) {
             console.log(data);
@@ -50,10 +55,12 @@ async function getHash(cred) {
  */
 async function isTableNotEmpty(Model) {
     // try {
+        let startDb = Date.now();
     const data = await Model.findAll();
     if (data == undefined || data.length == 0) {
         throw new Error("The table is empty!");
     }
+    statsDutil.stopTimer(startDb, statsDclient, 'findall to check table is empty');
 }
 
 /**
