@@ -12,8 +12,13 @@ var path = require('path');
 const {
     v4: uuidv4
 } = require('uuid');
+let StatsD = require('node-statsd');
+let statsDclient = new StatsD();
+let startTime, endTime;
+
 //TODO: For file upload handle uploading the duplicate files == check for conflict policy replace
 exports.attachToQuestion = (req, res) => {
+    statsDclient.increment('question_file_upload_count');
     let qid = req.params.question_id;
     let creds;
     auth.authenticateCredentials(req.headers.authorization)
@@ -141,7 +146,7 @@ exports.attachToQuestion = (req, res) => {
 // ---------------------------------------------------------------Attach to Answer------------------------------------------------------------------------
 
 exports.attachToAnswer = (req, res) => {
-
+    statsDclient.increment('answer_file_upload_count');
     let qid = req.params.question_id;
     let ansId = req.params.answer_id;
     let creds;
@@ -175,7 +180,7 @@ exports.attachToAnswer = (req, res) => {
                                 //TODO: Eliminate extra querying for user and questions as answer Eager query is returning all associations. Also check if params qid == answer's question_id
                                 // console.log("---check eager loading---");
                                 // console.log(ans);
-                                if(ans==undefined || ans==null){
+                                if (ans == undefined || ans == null) {
                                     throw new Error("Error obtaining the answer. Please ensure the answer id is correct!");
                                 }
                                 if (ans.user_id != user.id) {
@@ -309,6 +314,7 @@ exports.attachToAnswer = (req, res) => {
 //---------------Delete question attachment-------------------------------------------------
 
 exports.deleteQuestionFile = (req, res) => {
+    statsDclient.increment('question_file_delete_count');
     let qid = req.params.question_id;
     let fileId = req.params.file_id;
     auth.authenticateCredentials(req.headers.authorization)
@@ -435,6 +441,7 @@ exports.deleteQuestionFile = (req, res) => {
 //---------------Delete answer attachment-------------------------------------------------
 
 exports.deleteAnswerFile = (req, res) => {
+    statsDclient.increment('question_file_delete_count');
     let qid = req.params.question_id;
     let fileId = req.params.file_id;
     let ansId = req.params.answer_id;
@@ -575,7 +582,7 @@ exports.deleteAnswerFile = (req, res) => {
 function uploadToS3(file, modelId) {
 
     AWS.config.update({
-       
+
         region: 'us-east-1'
     });
 
@@ -617,7 +624,7 @@ function uploadToS3(file, modelId) {
 
 function deleteS3Object(file) {
     AWS.config.update({
-      
+
         region: 'us-east-1'
     });
 
