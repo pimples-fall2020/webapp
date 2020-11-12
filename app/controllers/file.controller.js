@@ -14,11 +14,12 @@ const {
 } = require('uuid');
 let StatsD = require('node-statsd');
 let statsDclient = new StatsD();
-let startApiTime, endApiTime, startDbTime, endDbTime;
+let startApiTime, endApiTime, startDbTime, endDbTime,startS3time;
 const statsDutil = require('../utils/statsd.utils');
-
+const logger = require('../config/logger.config');
 //TODO: For file upload handle uploading the duplicate files == check for conflict policy replace
 exports.attachToQuestion = (req, res) => {
+    logger.info("Attaching file to question");
     startApiTime = Date.now();
     statsDclient.increment('question_file_upload_count');
     let qid = req.params.question_id;
@@ -28,6 +29,7 @@ exports.attachToQuestion = (req, res) => {
             if (resultObj.auth != undefined && resultObj.auth == true) {
                 //All good, authenticated!
                 console.log(resultObj + " Authenticated!");
+                logger.info("User authenticated!");
                 creds = resultObj.cred;
                 return true;
             } else {
@@ -53,6 +55,7 @@ exports.attachToQuestion = (req, res) => {
                                 throw new Error("File type error. Please upload image files");
                             }
 
+                            startS3time = Date.now();
                             let uploadResult = uploadToS3(file, qid);
 
                             uploadResult.upload_promise
@@ -60,7 +63,8 @@ exports.attachToQuestion = (req, res) => {
                                         //Upload done , no error         
                                         if (uploadData) {
                                             console.log("Upload Success", uploadData.Location);
-
+                                            logger.info("Upload success");
+                                            statsDutil.stopTimer(startS3time, statsDclient, 's3_file_upload_time');
                                             let createFileObject = {
                                                 file_id: uploadResult.file_id,
                                                 file_name: file.originalname,
@@ -70,10 +74,12 @@ exports.attachToQuestion = (req, res) => {
                                                 location: uploadData.Location != undefined ? uploadData.Location : '',
                                                 question_id: qid
                                             };
-
+                                            startDbTime = Date.now();
                                             File.create(createFileObject)
                                                 .then((createResult) => {
+                                                    statsDutil.stopTimer(startDbTime, statsDclient, 'db_createfile_ques_time');
                                                     console.log("file inserted in db");
+                                                    logger.info("File created and added in DB");
                                                     let resJson = {
                                                         file_name: createResult.file_name,
                                                         s3_object_name: createResult.s3_object_name,
@@ -84,6 +90,8 @@ exports.attachToQuestion = (req, res) => {
                                                     res.status(201).send(resJson);
                                                 })
                                                 .catch(err => {
+                                                    logger.error(err.toString());
+                                                    statsDutil.stopTimer(startDbTime, statsDclient, 'db_createfile_ques_time');
                                                     statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ques_api_time');
                                                     console.log(err);
                                                     res.status(400).send({
@@ -99,6 +107,8 @@ exports.attachToQuestion = (req, res) => {
 
                         })
                         .catch((err) => {
+                            statsDutil.stopTimer(startS3time, statsDclient, 's3_file_upload_ques_time');
+                            logger.error(err.toString());
                             statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ques_api_time');
                             //TODO: handle 400 and 401 thrown above
                             if (err.toString().includes('Unauthorized')) {
@@ -113,6 +123,7 @@ exports.attachToQuestion = (req, res) => {
                         });
 
                 }).catch(err => {
+                    logger.error(err.toString());
                     statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ques_api_time');
                     if (err.toString().includes('Unauthorized')) {
                         res.status(401).send({
@@ -129,6 +140,7 @@ exports.attachToQuestion = (req, res) => {
             }
         })
         .catch((err) => {
+            logger.error(err.toString());
             statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ques_api_time');
             console.log("error---" + err);
             if (err.toString().includes("username") ||
@@ -153,6 +165,7 @@ exports.attachToQuestion = (req, res) => {
 // ---------------------------------------------------------------Attach to Answer------------------------------------------------------------------------
 
 exports.attachToAnswer = (req, res) => {
+    logger.info("Attaching file to answer");
     startApiTime = Date.now();
     statsDclient.increment('answer_file_upload_count');
     let qid = req.params.question_id;
@@ -163,6 +176,7 @@ exports.attachToAnswer = (req, res) => {
             if (resultObj.auth != undefined && resultObj.auth == true) {
                 //All good, authenticated!
                 console.log(resultObj + " Authenticated!");
+                logger.info("Authenticated!");
                 creds = resultObj.cred;
                 return true;
             } else {
@@ -176,6 +190,7 @@ exports.attachToAnswer = (req, res) => {
                 let currentUserId = creds.username;
                 fetchCurrentUser(currentUserId).then((user) => {
                     getQuestionFromId(qid).then((ques) => {
+                        startDbTime = Date.now();
                             Answer.findByPk(ansId, {
                                 include: [{
                                         model: Question
@@ -185,6 +200,7 @@ exports.attachToAnswer = (req, res) => {
                                     }
                                 ]
                             }).then((ans) => {
+                                statsDutil.stopTimer(startDbTime, statsDclient, 'db_attachfile_ans_findByPk_time');
                                 //TODO: Eliminate extra querying for user and questions as answer Eager query is returning all associations. Also check if params qid == answer's question_id
                                 // console.log("---check eager loading---");
                                 // console.log(ans);
@@ -202,7 +218,7 @@ exports.attachToAnswer = (req, res) => {
                                 if (ext !== '.png' && ext !== '.jpg' && ext !== '.gif' && ext !== '.jpeg') {
                                     throw new Error("File type error. Please upload image files");
                                 }
-
+                                startS3time = Date.now();
                                 let uploadResult = uploadToS3(file, ansId);
 
                                 uploadResult.upload_promise
@@ -210,7 +226,8 @@ exports.attachToAnswer = (req, res) => {
                                             //Upload done , no error         
                                             if (uploadData) {
                                                 console.log("Upload Success", uploadData.Location);
-
+                                                logger.info("Upload successful");
+                                                statsDutil.stopTimer(startS3time, statsDclient, 's3_file_upload_ans_time');
                                                 let createFileObject = {
                                                     file_id: uploadResult.file_id,
                                                     file_name: file.originalname,
@@ -220,9 +237,11 @@ exports.attachToAnswer = (req, res) => {
                                                     location: uploadData.Location != undefined ? uploadData.Location : '',
                                                     answer_id: ansId
                                                 };
-
+                                                let startCreateTime=Date.now();
                                                 File.create(createFileObject)
                                                     .then((createResult) => {
+                                                        logger.info("File added in DB");
+                                                        statsDutil.stopTimer(startDbTime, statsDclient, 'db_insertfile_ans_time');
                                                         console.log("file inserted in db");
                                                         let resJson = {
                                                             file_name: createResult.file_name,
@@ -234,6 +253,8 @@ exports.attachToAnswer = (req, res) => {
                                                         res.status(201).send(resJson);
                                                     })
                                                     .catch(err => {
+                                                        logger.error(err.toString());
+                                                        statsDutil.stopTimer(startDbTime, statsDclient, 'db_insertfile_ans_time');
                                                         statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ans_api_time');
                                                         console.log(err);
                                                         res.status(400).send({
@@ -247,7 +268,10 @@ exports.attachToAnswer = (req, res) => {
                                             throw err;
                                         });
                             }).catch(err => {
+                                statsDutil.stopTimer(startS3time, statsDclient, 's3_file_upload_ans_time');
                                 // console.log(err);
+                                logger.error(err.toString());
+                                statsDutil.stopTimer(startDbTime, statsDclient, 'db_attachfile_ans_findByPk_time');
                                 statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ans_api_time');
                                 if (err.toString().includes('Unauthorized')) {
                                     res.status(401).send({
@@ -266,6 +290,7 @@ exports.attachToAnswer = (req, res) => {
 
                         })
                         .catch((err) => {
+                            logger.error(err.toString());
                             statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ans_api_time');
                             console.log(err);
                             if (err.toString().includes('Unauthorized')) {
@@ -285,6 +310,7 @@ exports.attachToAnswer = (req, res) => {
                         });
 
                 }).catch(err => {
+                    logger.error(err.toString());
                     statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ans_api_time');
                     if (err.toString().includes('Unauthorized')) {
                         res.status(401).send({
@@ -301,6 +327,7 @@ exports.attachToAnswer = (req, res) => {
             }
         })
         .catch((err) => {
+            logger.error(err.toString());
             statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ans_api_time');
             console.log("error---" + err);
             if (err.toString().includes("username") ||
@@ -329,6 +356,7 @@ exports.attachToAnswer = (req, res) => {
 
 exports.deleteQuestionFile = (req, res) => {
     startApiTime = Date.now();
+    logger.warn("File is being deleted from S3");
     statsDclient.increment('question_file_delete_count');
     let qid = req.params.question_id;
     let fileId = req.params.file_id;
@@ -336,8 +364,9 @@ exports.deleteQuestionFile = (req, res) => {
         .then((resultObj) => {
             if (resultObj.auth != undefined && resultObj.auth == true) {
                 //All good, authenticated!
+                logger.info("Authenticated!");
                 console.log(resultObj + " Authenticated!");
-
+                startDbTime = Date.now();
                 //get file by pk and include question, nested include question's user, compare + check
                 File.findByPk(fileId, {
                         include: {
@@ -347,6 +376,7 @@ exports.deleteQuestionFile = (req, res) => {
                             }
                         }
                     }).then((queryData) => {
+                        statsDutil.stopTimer(startDbTime, statsDclient, 'db_findfileByPk_time');
                         // console.log(queryData.dataValues);
                         // console.log(queryData.question.dataValues);
                         // console.log(queryData.question.user.dataValues);
@@ -359,23 +389,31 @@ exports.deleteQuestionFile = (req, res) => {
                         //check if the user is authorized
                         if (queryData.question.user.dataValues.username == resultObj.cred.username) {
                             console.log("user is authorized to delete!");
+                            logger.info("The user is authorized to delete");
                             //check if question id is correct
                             if (queryData.question.question_id == qid) {
                                 // console.log("correct question!")
                                 //proceed to delete!
+                                logger.info("Deleting question attachment");
+                                startS3time = Date.now();
                                 console.log("deleting" + queryData.s3_object_name);
                                 deleteS3Object(queryData.s3_object_name)
                                     .then((deleteData) => {
                                         console.log(deleteData);
                                         console.log("object deleted!");
+                                        logger.info("Object deleted!");
+                                        statsDutil.stopTimer(startS3time, statsDclient, 's3_file_del_ques_time');
+                                        let startdelete = Date.now();
                                         File.destroy({
                                             where: {
                                                 file_id: fileId
                                             }
                                         }).then(num => {
-                                            console.log(num);
+                                            // console.log(num);
+                                            statsDutil.stopTimer(startDbTime, statsDclient, 'db_filedestroy_ques_time');
                                             if (num == 1) {
                                                 //deleted successfully
+                                                logger.info("File deleted successfully!");
                                                 statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ques_api_time');
                                                 res.status(204).send();
                                             } else {
@@ -395,6 +433,10 @@ exports.deleteQuestionFile = (req, res) => {
 
                     })
                     .catch((err) => {
+                        statsDutil.stopTimer(startS3time, statsDclient, 's3_file_upload_ans_time');
+                        logger.error(err.toString());
+                        statsDutil.stopTimer(startDbTime, statsDclient, 'db_filedestroy_ques_time'); //WARN:this might create inconsistent result (stopping timer without starting)
+                        statsDutil.stopTimer(startDbTime, statsDclient, 'db_findfileByPk_time');
                         statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ques_api_time');
                         console.log("error---" + err);
                         if (err.toString().includes("username") ||
@@ -428,6 +470,7 @@ exports.deleteQuestionFile = (req, res) => {
             }
         })
         .catch((err) => {
+            logger.error(err.toString());
             statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ques_api_time');
             console.log("error---" + err);
             if (err.toString().includes("username") ||
@@ -460,6 +503,7 @@ exports.deleteQuestionFile = (req, res) => {
 
 exports.deleteAnswerFile = (req, res) => {
     startApiTime = Date.now();
+    logger.warn("About to delete answer attachment file");
     statsDclient.increment('question_file_delete_count');
     let qid = req.params.question_id;
     let fileId = req.params.file_id;
@@ -469,7 +513,8 @@ exports.deleteAnswerFile = (req, res) => {
             if (resultObj.auth != undefined && resultObj.auth == true) {
                 //All good, authenticated!
                 console.log(resultObj + " Authenticated!");
-
+                logger.info("Authenticated");
+                let startFind = Date.now();
                 //get file by pk and include question, nested include question's user, compare + check
                 File.findByPk(fileId, {
                         include: {
@@ -483,6 +528,7 @@ exports.deleteAnswerFile = (req, res) => {
                             ]
                         }
                     }).then((queryData) => {
+                        statsDutil.stopTimer(startFind, statsDclient, 'db_filedestroy_findbyPk_time');
                         // console.log(queryData.dataValues);
                         // console.log(queryData.question.dataValues);
                         // console.log(queryData.question.user.dataValues);
@@ -502,18 +548,24 @@ exports.deleteAnswerFile = (req, res) => {
                                 }
                                 // console.log("correct question!")
                                 //proceed to delete!
+                                logger.info("Deleting Answer attachment file from S3..");
+                                startS3time = Date.now();
                                 console.log("deleting" + queryData.s3_object_name);
                                 deleteS3Object(queryData.s3_object_name)
                                     .then((deleteData) => {
                                         console.log("object deleted!");
+                                        statsDutil.stopTimer(startS3time, statsDclient, 's3_file_del_ans_time');
                                         console.log(deleteData);
+                                        let startdestroy = Date.now();
                                         File.destroy({
                                             where: {
                                                 file_id: fileId
                                             }
                                         }).then(num => {
+                                            statsDutil.stopTimer(startdestroy, statsDclient, 'db_filedestroy_ans_time');
                                             console.log(num);
                                             if (num == 1) {
+                                                logger.info("Deleted successfully)");
                                                 //deleted successfully
                                                 statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ans_api_time');
                                                 res.status(204).send();
@@ -534,6 +586,10 @@ exports.deleteAnswerFile = (req, res) => {
 
                     })
                     .catch((err) => {
+                        statsDutil.stopTimer(startS3time, statsDclient, 's3_file_del_ans_time');
+                        logger.error(err.toString());
+                        statsDutil.stopTimer(startdestroy, statsDclient, 'db_filedestroy_ans_time');
+                        statsDutil.stopTimer(startFind, statsDclient, 'db_filedestroy_findbyPk_time');
                         statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ans_api_time');
                         console.log("error---" + err);
                         if (err.toString().includes("username") ||
@@ -567,6 +623,7 @@ exports.deleteAnswerFile = (req, res) => {
             }
         })
         .catch((err) => {
+            logger.error(err.toString());
             statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ans_api_time');
             console.log("error---" + err);
             if (err.toString().includes("username") ||
@@ -635,11 +692,17 @@ function uploadToS3(file, modelId) {
     // uploadParams.Key = path.basename(file_name);
     uploadParams.Key = s3ObjectName;
     // call S3 to retrieve upload file to specified bucket
-    let returnObj = {
-        file: file,
-        file_id: fileId,
-        s3_obj: s3ObjectName,
-        upload_promise: s3.upload(uploadParams).promise()
+    let returnObj = {};
+    try {
+        returnObj = {
+            file: file,
+            file_id: fileId,
+            s3_obj: s3ObjectName,
+            upload_promise: s3.upload(uploadParams).promise()
+        }
+        
+    } catch (error) {
+        throw error;
     }
     return returnObj;
 }
@@ -663,12 +726,13 @@ function deleteS3Object(file) {
     return s3.deleteObject(params).promise();
 }
 async function getQuestionFromId(qid) {
-
+    let startt = Date.now();
     let ques = await Question.findOne({
         where: {
             question_id: qid
         }
     });
+    statsDutil.stopTimer(startt, statsDclient, 'db_findOne_ques_time');
     if (ques != undefined && ques != null) {
         return ques.dataValues;
     }
@@ -676,11 +740,13 @@ async function getQuestionFromId(qid) {
 }
 async function fetchCurrentUser(userName) {
     // let currUser;
+    let startt = Date.now()
     let currUser = await User.findOne({
         where: {
             username: userName
         }
     });
+    statsDutil.stopTimer(startt, statsDclient, 'db_findOne_user_time');
     if (currUser != undefined && currUser != null) {
         return currUser.dataValues;
     }
