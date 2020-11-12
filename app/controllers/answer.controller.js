@@ -8,9 +8,11 @@ var payloadChecker = require('payload-validator');
 var currentUserId;
 let StatsD = require('node-statsd');
 let statsDclient = new StatsD();
-let startTime, endTime;
+let startApiTime, endApiTime, startDbTime, endDbTime;
+const statsDutil = require('../utils/statsd.utils');
 
 exports.postAnswer = (req, res) => {
+    startApiTime = Date.now();
     statsDclient.increment('create_answer_counter');
     let qid = req.params.question_id;
     //TODO: Simplify the nested promises below!!!!!!
@@ -47,9 +49,11 @@ exports.postAnswer = (req, res) => {
                                                 message: "Answer Posted",
                                                 data: data.dataValues
                                             }
+                                            statsDutil.stopTimer(startApiTime, statsDclient, 'create_ans_api_time');
                                             res.status(201).send(createdAnswer);
                                         })
                                         .catch(err => {
+                                            statsDutil.stopTimer(startApiTime, statsDclient, 'create_ans_api_time');
                                             console.log(err);
                                             res.status(400).send({
                                                 message: err.toString()
@@ -60,6 +64,7 @@ exports.postAnswer = (req, res) => {
                                 }
                             })
                             .catch((err) => {
+                                statsDutil.stopTimer(startApiTime, statsDclient, 'create_ans_api_time');
                                 res.status(404).send({
                                     message: "Error: Unable to fetch question, please check the question_id"
                                 });
@@ -68,6 +73,7 @@ exports.postAnswer = (req, res) => {
 
 
                     }).catch(err => {
+                        statsDutil.stopTimer(startApiTime, statsDclient, 'create_ans_api_time');
                         res.status(400).send({
                             message: "Error: Error while fetching user for associating with answer"
                         });
@@ -80,6 +86,7 @@ exports.postAnswer = (req, res) => {
             }
         })
         .catch((err) => {
+            statsDutil.stopTimer(startApiTime, statsDclient, 'create_ans_api_time');
             console.log("error---" + err);
             if (err.toString().includes("username") ||
                 err.toString().includes("Username") ||
@@ -104,6 +111,7 @@ exports.postAnswer = (req, res) => {
 //----------------update the answer--------------------------------
 //TODO: Simplify the nested promises below!!!!!!
 exports.updateAnswer = (req, res) => {
+    startApiTime = Date.now();
     statsDclient.increment('update_answer_counter');
     let qid = req.params.question_id;
     let ansId = req.params.answer_id;
@@ -152,6 +160,7 @@ exports.updateAnswer = (req, res) => {
                                                 console.log(num);
                                                 if (num == 1) {
                                                     //updated successfully
+                                                    statsDutil.stopTimer(startApiTime, statsDclient, 'update_ans_api_time');
                                                     res.status(204).send();
                                                 } else {
                                                     //could not delete. maybe question not found
@@ -160,6 +169,7 @@ exports.updateAnswer = (req, res) => {
                                                 }
                                             })
                                             .catch(err => {
+                                                statsDutil.stopTimer(startApiTime, statsDclient, 'update_ans_api_time');
                                                 console.log(err);
                                                 if (err.toString().includes('Unauthorized')) {
                                                     res.status(401).send({
@@ -180,12 +190,14 @@ exports.updateAnswer = (req, res) => {
                                     }
                                 })
                                 .catch((err) => {
+                                    statsDutil.stopTimer(startApiTime, statsDclient, 'update_ans_api_time');
                                     res.status(404).send({
                                         message: "Error: Unable to fetch question, please check the question_id. " + err.toString()
                                     });
                                 });
 
                         }).catch(err => {
+                            statsDutil.stopTimer(startApiTime, statsDclient, 'update_ans_api_time');
                             console.log(err);
                             if (err.toString().includes('Unauthorized')) {
                                 res.status(401).send({
@@ -206,6 +218,7 @@ exports.updateAnswer = (req, res) => {
 
 
                     }).catch(err => {
+                        statsDutil.stopTimer(startApiTime, statsDclient, 'update_ans_api_time');
                         if (err.toString().includes('Unauthorized')) {
                             res.status(401).send({
                                 message: err.toString()
@@ -226,6 +239,7 @@ exports.updateAnswer = (req, res) => {
             }
         })
         .catch((err) => {
+            statsDutil.stopTimer(startApiTime, statsDclient, 'update_ans_api_time');
             console.log("error---" + err);
             if (err.toString().includes("username") ||
                 err.toString().includes("Username") ||
@@ -249,6 +263,7 @@ exports.updateAnswer = (req, res) => {
 //--------------------------------DELETE AN ANSWER-------------------------------------------------
 
 exports.deleteAnswer = (req, res) => {
+    startApiTime = Date.now();
     statsDclient.increment('delete_answer_counter');
     let qid = req.params.question_id;
     let ansId = req.params.answer_id;
@@ -289,6 +304,7 @@ exports.deleteAnswer = (req, res) => {
                                             console.log(num);
                                             if (num == 1) {
                                                 //deleted successfully
+                                                statsDutil.stopTimer(startApiTime, statsDclient, 'del_ans_api_time');
                                                 res.status(204).send();
                                             } else {
                                                 //could not delete. maybe question not found
@@ -296,6 +312,7 @@ exports.deleteAnswer = (req, res) => {
                                             }
                                         })
                                         .catch(err => {
+                                            statsDutil.stopTimer(startApiTime, statsDclient, 'del_ans_api_time');
                                             console.log(err);
                                             if (err.toString().includes('not found')) {
                                                 res.status(404).send({
@@ -312,12 +329,14 @@ exports.deleteAnswer = (req, res) => {
                                 }
                             })
                             .catch((err) => {
+                                statsDutil.stopTimer(startApiTime, statsDclient, 'del_ans_api_time');
                                 res.status(404).send({
                                     message: "Error: Unable to fetch question, please check the question_id. " + err.toString()
                                 });
                             });
 
                     }).catch(err => {
+                        statsDutil.stopTimer(startApiTime, statsDclient, 'del_ans_api_time');
                         console.log(err);
                         if (err.toString().includes('Unauthorized')) {
                             res.status(401).send({
@@ -336,6 +355,7 @@ exports.deleteAnswer = (req, res) => {
                     });
 
                 }).catch(err => {
+                    statsDutil.stopTimer(startApiTime, statsDclient, 'del_ans_api_time');
                     res.status(400).send({
                         message: "Error: Error while fetching user for associating with answer. " + err.toString()
                     });
@@ -350,6 +370,7 @@ exports.deleteAnswer = (req, res) => {
             }
         })
         .catch((err) => {
+            statsDutil.stopTimer(startApiTime, statsDclient, 'del_ans_api_time');
             console.log("error---" + err);
             if (err.toString().includes("username") ||
                 err.toString().includes("Username") ||
@@ -373,6 +394,7 @@ exports.deleteAnswer = (req, res) => {
 
 // --------------------GET ANSWER FROM ID -----------------------------
 exports.getAnswerFromId = (req, res) => {
+    startApiTime = Date.now();
     statsDclient.increment('get_answer_counter');
     //TODO: Error handling for wrong question ids
     let qid = req.params.question_id;
@@ -408,13 +430,15 @@ exports.getAnswerFromId = (req, res) => {
         // res.send(ans.get({
         //     plain: true
         // }));
+        statsDutil.stopTimer(startApiTime, statsDclient, 'get_ans_api_time');
         res.send(ans);
     }).catch(err => {
+        statsDutil.stopTimer(startApiTime, statsDclient, 'get_ans_api_time');
         console.log(err);
         res.status(404).send({
             message: "Unable to get the answer from if, please check the id!"
         });
-    })
+    });
 
 }
 async function fetchCurrentUser(userName) {

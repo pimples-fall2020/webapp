@@ -14,10 +14,12 @@ const {
 } = require('uuid');
 let StatsD = require('node-statsd');
 let statsDclient = new StatsD();
-let startTime, endTime;
+let startApiTime, endApiTime, startDbTime, endDbTime;
+const statsDutil = require('../utils/statsd.utils');
 
 //TODO: For file upload handle uploading the duplicate files == check for conflict policy replace
 exports.attachToQuestion = (req, res) => {
+    startApiTime = Date.now();
     statsDclient.increment('question_file_upload_count');
     let qid = req.params.question_id;
     let creds;
@@ -78,9 +80,11 @@ exports.attachToQuestion = (req, res) => {
                                                         file_id: createResult.file_id,
                                                         created_date: createResult.created_date
                                                     }
+                                                    statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ques_api_time');
                                                     res.status(201).send(resJson);
                                                 })
                                                 .catch(err => {
+                                                    statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ques_api_time');
                                                     console.log(err);
                                                     res.status(400).send({
                                                         message: err.toString()
@@ -95,6 +99,7 @@ exports.attachToQuestion = (req, res) => {
 
                         })
                         .catch((err) => {
+                            statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ques_api_time');
                             //TODO: handle 400 and 401 thrown above
                             if (err.toString().includes('Unauthorized')) {
                                 res.status(401).send({
@@ -108,6 +113,7 @@ exports.attachToQuestion = (req, res) => {
                         });
 
                 }).catch(err => {
+                    statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ques_api_time');
                     if (err.toString().includes('Unauthorized')) {
                         res.status(401).send({
                             message: err.toString()
@@ -123,6 +129,7 @@ exports.attachToQuestion = (req, res) => {
             }
         })
         .catch((err) => {
+            statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ques_api_time');
             console.log("error---" + err);
             if (err.toString().includes("username") ||
                 err.toString().includes("Username") ||
@@ -146,6 +153,7 @@ exports.attachToQuestion = (req, res) => {
 // ---------------------------------------------------------------Attach to Answer------------------------------------------------------------------------
 
 exports.attachToAnswer = (req, res) => {
+    startApiTime = Date.now();
     statsDclient.increment('answer_file_upload_count');
     let qid = req.params.question_id;
     let ansId = req.params.answer_id;
@@ -222,9 +230,11 @@ exports.attachToAnswer = (req, res) => {
                                                             file_id: createResult.file_id,
                                                             created_date: createResult.created_date
                                                         }
+                                                        statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ans_api_time');
                                                         res.status(201).send(resJson);
                                                     })
                                                     .catch(err => {
+                                                        statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ans_api_time');
                                                         console.log(err);
                                                         res.status(400).send({
                                                             message: err.toString()
@@ -238,6 +248,7 @@ exports.attachToAnswer = (req, res) => {
                                         });
                             }).catch(err => {
                                 // console.log(err);
+                                statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ans_api_time');
                                 if (err.toString().includes('Unauthorized')) {
                                     res.status(401).send({
                                         message: err.toString()
@@ -255,6 +266,7 @@ exports.attachToAnswer = (req, res) => {
 
                         })
                         .catch((err) => {
+                            statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ans_api_time');
                             console.log(err);
                             if (err.toString().includes('Unauthorized')) {
                                 res.status(401).send({
@@ -273,6 +285,7 @@ exports.attachToAnswer = (req, res) => {
                         });
 
                 }).catch(err => {
+                    statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ans_api_time');
                     if (err.toString().includes('Unauthorized')) {
                         res.status(401).send({
                             message: err.toString()
@@ -288,6 +301,7 @@ exports.attachToAnswer = (req, res) => {
             }
         })
         .catch((err) => {
+            statsDutil.stopTimer(startApiTime, statsDclient, 'file_attach_ans_api_time');
             console.log("error---" + err);
             if (err.toString().includes("username") ||
                 err.toString().includes("Username") ||
@@ -314,6 +328,7 @@ exports.attachToAnswer = (req, res) => {
 //---------------Delete question attachment-------------------------------------------------
 
 exports.deleteQuestionFile = (req, res) => {
+    startApiTime = Date.now();
     statsDclient.increment('question_file_delete_count');
     let qid = req.params.question_id;
     let fileId = req.params.file_id;
@@ -361,6 +376,7 @@ exports.deleteQuestionFile = (req, res) => {
                                             console.log(num);
                                             if (num == 1) {
                                                 //deleted successfully
+                                                statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ques_api_time');
                                                 res.status(204).send();
                                             } else {
                                                 //could not delete. maybe question not found
@@ -379,6 +395,7 @@ exports.deleteQuestionFile = (req, res) => {
 
                     })
                     .catch((err) => {
+                        statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ques_api_time');
                         console.log("error---" + err);
                         if (err.toString().includes("username") ||
                             err.toString().includes("Username") ||
@@ -411,6 +428,7 @@ exports.deleteQuestionFile = (req, res) => {
             }
         })
         .catch((err) => {
+            statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ques_api_time');
             console.log("error---" + err);
             if (err.toString().includes("username") ||
                 err.toString().includes("Username") ||
@@ -441,6 +459,7 @@ exports.deleteQuestionFile = (req, res) => {
 //---------------Delete answer attachment-------------------------------------------------
 
 exports.deleteAnswerFile = (req, res) => {
+    startApiTime = Date.now();
     statsDclient.increment('question_file_delete_count');
     let qid = req.params.question_id;
     let fileId = req.params.file_id;
@@ -496,6 +515,7 @@ exports.deleteAnswerFile = (req, res) => {
                                             console.log(num);
                                             if (num == 1) {
                                                 //deleted successfully
+                                                statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ans_api_time');
                                                 res.status(204).send();
                                             } else {
                                                 //could not delete. maybe question not found
@@ -514,6 +534,7 @@ exports.deleteAnswerFile = (req, res) => {
 
                     })
                     .catch((err) => {
+                        statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ans_api_time');
                         console.log("error---" + err);
                         if (err.toString().includes("username") ||
                             err.toString().includes("Username") ||
@@ -546,6 +567,7 @@ exports.deleteAnswerFile = (req, res) => {
             }
         })
         .catch((err) => {
+            statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ans_api_time');
             console.log("error---" + err);
             if (err.toString().includes("username") ||
                 err.toString().includes("Username") ||
