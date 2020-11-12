@@ -67,4 +67,3 @@ PS: This project has been setup with AWS for storage, DB and CI/CD
 
 *Northeastern University, Boston*
 
-CICD
