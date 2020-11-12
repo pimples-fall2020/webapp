@@ -433,11 +433,17 @@ exports.deleteQuestionFile = (req, res) => {
 
                     })
                     .catch((err) => {
-                        statsDutil.stopTimer(startS3time, statsDclient, 's3_file_upload_ans_time');
+                        if(startS3time!=undefined && startS3time!=null){
+                            statsDutil.stopTimer(startS3time, statsDclient, 's3_file_upload_ans_time');
+                        }
                         logger.error(err.toString());
-                        statsDutil.stopTimer(startDbTime, statsDclient, 'db_filedestroy_ques_time'); //WARN:this might create inconsistent result (stopping timer without starting)
-                        statsDutil.stopTimer(startDbTime, statsDclient, 'db_findfileByPk_time');
-                        statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ques_api_time');
+                        if(startDbTime!=undefined && startDbTime!=null){
+                            statsDutil.stopTimer(startDbTime, statsDclient, 'db_filedestroy_ques_time'); //WARN:this might create inconsistent result (stopping timer without starting)
+                            statsDutil.stopTimer(startDbTime, statsDclient, 'db_findfileByPk_time');
+                        }
+                        if(startApiTime!=undefined && startApiTime!=null){
+                            statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ques_api_time');
+                        }
                         console.log("error---" + err);
                         if (err.toString().includes("username") ||
                             err.toString().includes("Username") ||
@@ -511,6 +517,7 @@ exports.deleteAnswerFile = (req, res) => {
     auth.authenticateCredentials(req.headers.authorization)
         .then((resultObj) => {
             if (resultObj.auth != undefined && resultObj.auth == true) {
+                let startdestroy;
                 //All good, authenticated!
                 console.log(resultObj + " Authenticated!");
                 logger.info("Authenticated");
@@ -556,7 +563,7 @@ exports.deleteAnswerFile = (req, res) => {
                                         console.log("object deleted!");
                                         statsDutil.stopTimer(startS3time, statsDclient, 's3_file_del_ans_time');
                                         console.log(deleteData);
-                                        let startdestroy = Date.now();
+                                        startdestroy = Date.now();
                                         File.destroy({
                                             where: {
                                                 file_id: fileId
@@ -586,11 +593,19 @@ exports.deleteAnswerFile = (req, res) => {
 
                     })
                     .catch((err) => {
-                        statsDutil.stopTimer(startS3time, statsDclient, 's3_file_del_ans_time');
+                        if(startS3time!=undefined && startS3time!=null){
+                            statsDutil.stopTimer(startS3time, statsDclient, 's3_file_del_ans_time');
+                        }
                         logger.error(err.toString());
-                        statsDutil.stopTimer(startdestroy, statsDclient, 'db_filedestroy_ans_time');
-                        statsDutil.stopTimer(startFind, statsDclient, 'db_filedestroy_findbyPk_time');
-                        statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ans_api_time');
+                        if(startdestroy && startdestroy!==undefined && startdestroy!=null){
+                            statsDutil.stopTimer(startdestroy, statsDclient, 'db_filedestroy_ans_time');
+                        }
+                        if(startFind!=undefined && startFind!=null){
+                            statsDutil.stopTimer(startFind, statsDclient, 'db_filedestroy_findbyPk_time');
+                        }
+                        if(startApiTime!=undefined && startApiTime!=null){
+                            statsDutil.stopTimer(startApiTime, statsDclient, 'file_del_ans_api_time');
+                        }
                         console.log("error---" + err);
                         if (err.toString().includes("username") ||
                             err.toString().includes("Username") ||
