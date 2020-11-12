@@ -9,7 +9,8 @@ const commonPasswordList = require('fxa-common-password-list');
 const bcrypt = require("bcrypt");
 const saltRounds = 10;
 var StatsD = require('node-statsd'),
-  statsDclient = new StatsD();
+statsDclient = new StatsD();
+var startTime, endTime;
 
 //TODO: Fix and review all the error codes and error messages below. handle more cases!!! There are always more cases to handle!
 
@@ -32,7 +33,7 @@ exports.create = (req, res) => {
   logger.info("Called create User");
   statsDclient.increment('create_user_counter');
 
-
+  startTime = Date.now();
   try {
     //validates user fields and password pattern
     validateUserRequestFull(req.body, true);
@@ -68,6 +69,9 @@ exports.create = (req, res) => {
             message: "User Created!",
             data: resp
           });
+          endTime = Date.now();
+          let timing =endTime-startTime;
+          statsDclient.timing('user_create_time', timing);
         })
         .catch((err) => {
 
