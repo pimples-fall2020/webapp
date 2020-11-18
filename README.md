@@ -59,6 +59,7 @@ OR `npm run start-dev` for development environment
          - `password`
 
 PS: This project has been setup with AWS for storage, DB and CI/CD
+CloudWatch demo
 ---
 ## Thank you!
 *Sanket Pimple (pimple.s@northeastern.edu)*
