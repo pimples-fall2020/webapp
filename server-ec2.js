@@ -1,7 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
-const logger = require('../config/logger.config');
+const logger = require('./app/config/logger.config');
 const app = express();
 
 var corsOptions = {
