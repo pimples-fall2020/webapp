@@ -22,10 +22,6 @@ var sns_params = {
     /* required */
     TopicArn: process.env.SNS_ARN
 };
-// Create promise and SNS service object
-var publishTextPromise = new AWS.SNS({
-    apiVersion: '2010-03-31'
-}).publish(sns_params).promise();
 
 exports.postAnswer = (req, res) => {
     startApiTime = Date.now();
@@ -68,6 +64,11 @@ exports.postAnswer = (req, res) => {
                                                 message: "Answer Posted",
                                                 data: data.dataValues
                                             }
+                                            // Create promise and SNS service object
+                                            var publishTextPromise = new AWS.SNS({
+                                                apiVersion: '2010-03-31'
+                                            }).publish(sns_params).promise();
+
                                             publishTextPromise.then(
                                                 function (data) {
                                                     logger.info("Answer posted!");
