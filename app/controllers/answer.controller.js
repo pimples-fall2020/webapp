@@ -11,6 +11,21 @@ let statsDclient = new StatsD();
 let startApiTime, endApiTime, startDbTime, endDbTime;
 const statsDutil = require('../utils/statsd.utils');
 const logger = require('../config/logger.config');
+var AWS = require('aws-sdk');
+// Set region
+AWS.config.update({
+    region: 'us-east-1'
+});
+
+var sns_params = {
+    Message: 'TESTINGGG',
+    /* required */
+    TopicArn: process.env.SNS_ARN
+};
+// Create promise and SNS service object
+var publishTextPromise = new AWS.SNS({
+    apiVersion: '2010-03-31'
+}).publish(params).promise();
 
 exports.postAnswer = (req, res) => {
     startApiTime = Date.now();
@@ -54,6 +69,14 @@ exports.postAnswer = (req, res) => {
                                                 data: data.dataValues
                                             }
                                             logger.info("Answer posted!");
+                                            publishTextPromise.then(
+                                                function (data) {
+                                                    console.log(`Message ${sns_params.Message} sent to the topic ${sns_params.TopicArn}`);
+                                                    console.log("MessageID is " + data.MessageId);
+                                                }).catch(
+                                                function (err) {
+                                                    console.error(err, err.stack);
+                                                });
                                             statsDutil.stopTimer(startApiTime, statsDclient, 'create_ans_api_time');
                                             res.status(201).send(createdAnswer);
                                         })
@@ -316,7 +339,7 @@ exports.deleteAnswer = (req, res) => {
                                     //Question is valid
 
 
-                                    let startDelTime= Date.now();
+                                    let startDelTime = Date.now();
                                     //delete the answer
                                     Answer.destroy({
                                             where: {
@@ -356,7 +379,7 @@ exports.deleteAnswer = (req, res) => {
                                 }
                             })
                             .catch((err) => {
-                                logger.error("Unable to fetch question: "+err.toString());
+                                logger.error("Unable to fetch question: " + err.toString());
                                 statsDutil.stopTimer(startApiTime, statsDclient, 'del_ans_api_time');
                                 res.status(404).send({
                                     message: "Error: Unable to fetch question, please check the question_id. " + err.toString()
@@ -441,7 +464,7 @@ exports.getAnswerFromId = (req, res) => {
         }
     }).then(ans => {
         statsDutil.stopTimer(startDbTime, statsDclient, 'db_get_findOne_ans_time');
-        if(ans==undefined || ans==null) {
+        if (ans == undefined || ans == null) {
             throw new Error("Answer not found, wrong ID!")
         }
         let ansObj = ans.dataValues;
@@ -451,10 +474,10 @@ exports.getAnswerFromId = (req, res) => {
         // attachments = ans.files;
         ans.files.forEach(file => {
             let obj = {
-                file_name : file.file_name,
+                file_name: file.file_name,
                 s3_object_name: file.s3_object_name,
                 file_id: file.file_id,
-                created_date: file.created_date  
+                created_date: file.created_date
             };
             attachments.push(obj);
         });
@@ -463,7 +486,7 @@ exports.getAnswerFromId = (req, res) => {
         // res.send(ans.get({
         //     plain: true
         // }));
-        logger.info("Answer for Id="+ansId+" found");
+        logger.info("Answer for Id=" + ansId + " found");
         statsDutil.stopTimer(startApiTime, statsDclient, 'get_ans_api_time');
         res.send(ans);
     }).catch(err => {
