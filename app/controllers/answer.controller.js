@@ -73,7 +73,7 @@ exports.postAnswer = (req, res) => {
                                                 question_link: 'www.api.'+webapp_env+'.sanketpimple.me/v1/question/' + qid,
                                                 answer_link: 'www.api.'+webapp_env+'.sanketpimple.me/v1/question/'+qid+'/answer/' + createdAnswer.data.answer_id
                                             }
-                                            sns_params.Message = snsMessage;
+                                            sns_params.Message = JSON.stringify(snsMessage);
                                             // Create promise and SNS service object
                                             var publishTextPromise = new AWS.SNS({
                                                 apiVersion: '2010-03-31'
@@ -84,7 +84,7 @@ exports.postAnswer = (req, res) => {
                                                     logger.info("Answer posted!");
                                                     statsDutil.stopTimer(startApiTime, statsDclient, 'create_ans_api_time');
                                                     res.status(201).send(createdAnswer);
-                                                    logger.info(`Message ${sns_params.Message} sent to the topic ${sns_params.TopicArn}`);
+                                                    logger.info(`Message ${JSON.stringify(sns_params.Message)} sent to the topic ${sns_params.TopicArn}`);
                                                     logger.info("MessageID is " + data.MessageId);
                                                 }).catch(
                                                 function (err) {
