@@ -68,17 +68,17 @@ exports.postAnswer = (req, res) => {
                                                 message: "Answer Posted",
                                                 data: data.dataValues
                                             }
-                                            logger.info("Answer posted!");
                                             publishTextPromise.then(
                                                 function (data) {
+                                                    logger.info("Answer posted!");
+                                                    statsDutil.stopTimer(startApiTime, statsDclient, 'create_ans_api_time');
+                                                    res.status(201).send(createdAnswer);
                                                     logger.info(`Message ${sns_params.Message} sent to the topic ${sns_params.TopicArn}`);
                                                     logger.info("MessageID is " + data.MessageId);
                                                 }).catch(
                                                 function (err) {
-                                                    console.error(err, err.stack);
+                                                    logger.error(err.toString());
                                                 });
-                                            statsDutil.stopTimer(startApiTime, statsDclient, 'create_ans_api_time');
-                                            res.status(201).send(createdAnswer);
                                         })
                                         .catch(err => {
                                             logger.error(err.toString());
