@@ -71,8 +71,8 @@ exports.postAnswer = (req, res) => {
                                             logger.info("Answer posted!");
                                             publishTextPromise.then(
                                                 function (data) {
-                                                    console.log(`Message ${sns_params.Message} sent to the topic ${sns_params.TopicArn}`);
-                                                    console.log("MessageID is " + data.MessageId);
+                                                    logger.info(`Message ${sns_params.Message} sent to the topic ${sns_params.TopicArn}`);
+                                                    logger.info("MessageID is " + data.MessageId);
                                                 }).catch(
                                                 function (err) {
                                                     console.error(err, err.stack);
