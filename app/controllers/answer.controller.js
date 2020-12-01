@@ -16,9 +16,9 @@ var AWS = require('aws-sdk');
 AWS.config.update({
     region: 'us-east-1'
 });
-
+const webapp_env= process.env.ENV;
 var sns_params = {
-    Message: 'TESTINGGG',
+    Message: '',
     /* required */
     TopicArn: process.env.SNS_ARN
 };
@@ -64,6 +64,16 @@ exports.postAnswer = (req, res) => {
                                                 message: "Answer Posted",
                                                 data: data.dataValues
                                             }
+                                            let snsMessage = {
+                                                message: 'Answer Created',
+                                                question_id: qid,
+                                                username: user.username,
+                                                answer_id: createdAnswer.data.answer_id,
+                                                answer_text: createdAnswer.data.answer_text,
+                                                question_link: 'www.api.'+webapp_env+'.sanketpimple.me/v1/question/' + qid,
+                                                answer_link: 'www.api.'+webapp_env+'.sanketpimple.me/v1/question/'+qid+'/answer/' + createdAnswer.data.answer_id
+                                            }
+                                            sns_params.Message = snsMessage;
                                             // Create promise and SNS service object
                                             var publishTextPromise = new AWS.SNS({
                                                 apiVersion: '2010-03-31'
