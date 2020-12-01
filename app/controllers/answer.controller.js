@@ -25,7 +25,7 @@ var sns_params = {
 // Create promise and SNS service object
 var publishTextPromise = new AWS.SNS({
     apiVersion: '2010-03-31'
-}).publish(params).promise();
+}).publish(sns_params).promise();
 
 exports.postAnswer = (req, res) => {
     startApiTime = Date.now();
