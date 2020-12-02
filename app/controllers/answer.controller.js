@@ -22,7 +22,7 @@ var sns_params = {
     /* required */
     TopicArn: process.env.SNS_ARN
 };
-
+// TODO: Assignment 9 - send sns only after your own question is answered, own uestion's answer is updated and own question's answer is deleted -- check in ass
 exports.postAnswer = (req, res) => {
     startApiTime = Date.now();
     statsDclient.increment('create_answer_counter');
@@ -227,9 +227,7 @@ exports.updateAnswer = (req, res) => {
 
                                                     publishTextPromise.then(
                                                         function (data) {
-                                                            logger.info("Answer posted!");
-                                                            statsDutil.stopTimer(startApiTime, statsDclient, 'create_ans_api_time');
-                                                            res.status(201).send(createdAnswer);
+                                                            logger.info("Answer updated");
                                                             logger.info(`Message ${JSON.stringify(sns_params.Message)} sent to the topic ${sns_params.TopicArn}`);
                                                             logger.info("MessageID is " + data.MessageId);
 
@@ -416,10 +414,7 @@ exports.deleteAnswer = (req, res) => {
                                                 }).publish(sns_params).promise();
 
                                                 publishTextPromise.then(
-                                                    function (data) {
-                                                        logger.info("Answer posted!");
-                                                        statsDutil.stopTimer(startApiTime, statsDclient, 'create_ans_api_time');
-                                                        res.status(201).send(createdAnswer);
+                                                    function (data) {                                                                                                                                                                   
                                                         logger.info(`Message ${JSON.stringify(sns_params.Message)} sent to the topic ${sns_params.TopicArn}`);
                                                         logger.info("MessageID is " + data.MessageId);
 
