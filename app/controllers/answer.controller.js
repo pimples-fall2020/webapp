@@ -16,7 +16,7 @@ var AWS = require('aws-sdk');
 AWS.config.update({
     region: 'us-east-1'
 });
-const webapp_env= process.env.ENV;
+const webapp_env = process.env.ENV;
 var sns_params = {
     Message: '',
     /* required */
@@ -70,8 +70,8 @@ exports.postAnswer = (req, res) => {
                                                 username: user.username,
                                                 answer_id: createdAnswer.data.answer_id,
                                                 answer_text: createdAnswer.data.answer_text,
-                                                question_link: 'www.api.'+webapp_env+'.sanketpimple.me/v1/question/' + qid,
-                                                answer_link: 'www.api.'+webapp_env+'.sanketpimple.me/v1/question/'+qid+'/answer/' + createdAnswer.data.answer_id
+                                                question_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid,
+                                                answer_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid + '/answer/' + createdAnswer.data.answer_id
                                             }
                                             sns_params.Message = JSON.stringify(snsMessage);
                                             // Create promise and SNS service object
@@ -208,8 +208,45 @@ exports.updateAnswer = (req, res) => {
                                                 if (num == 1) {
                                                     //updated successfully
                                                     logger.info("Answer updated successfully!");
-                                                    statsDutil.stopTimer(startApiTime, statsDclient, 'update_ans_api_time');
-                                                    res.status(204).send();
+                                                    // --------------SNS---------------------------------------------------------------------
+
+                                                    let snsMessage = {
+                                                        message: 'Answer Updated',
+                                                        question_id: qid,
+                                                        username: user.username,
+                                                        answer_id: ansId,
+                                                        answer_text: updateAnswerObj.answer_text,
+                                                        question_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid,
+                                                        answer_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid + '/answer/' + ansId
+                                                    }
+                                                    sns_params.Message = JSON.stringify(snsMessage);
+                                                    // Create promise and SNS service object
+                                                    var publishTextPromise = new AWS.SNS({
+                                                        apiVersion: '2010-03-31'
+                                                    }).publish(sns_params).promise();
+
+                                                    publishTextPromise.then(
+                                                        function (data) {
+                                                            logger.info("Answer posted!");
+                                                            statsDutil.stopTimer(startApiTime, statsDclient, 'create_ans_api_time');
+                                                            res.status(201).send(createdAnswer);
+                                                            logger.info(`Message ${JSON.stringify(sns_params.Message)} sent to the topic ${sns_params.TopicArn}`);
+                                                            logger.info("MessageID is " + data.MessageId);
+
+                                                            statsDutil.stopTimer(startApiTime, statsDclient, 'update_ans_api_time');
+                                                            res.status(204).send();
+
+
+                                                        }).catch(
+                                                        function (err) {
+                                                            logger.error(err.toString());
+                                                        });
+
+
+                                                    // -------------------------------------------------------------------------------------
+
+
+
                                                 } else {
                                                     //could not delete. maybe question not found
                                                     throw new Error(`Could not update the Answer with id=${ansId}. The answer was not found`);
@@ -361,10 +398,44 @@ exports.deleteAnswer = (req, res) => {
                                             statsDutil.stopTimer(startDelTime, statsDclient, 'db_destroy_ans_time');
                                             console.log(num);
                                             if (num == 1) {
-                                                //deleted successfully
-                                                logger.info("Answer Deleted successfully");
-                                                statsDutil.stopTimer(startApiTime, statsDclient, 'del_ans_api_time');
-                                                res.status(204).send();
+                                                // --------------SNS---------------------------------------------------------------------
+
+                                                let snsMessage = {
+                                                    message: 'Answer Deleted',
+                                                    question_id: qid,
+                                                    username: user.username,
+                                                    answer_id: ansId,
+                                                    answer_text: ans.answer_text,
+                                                    question_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid,
+                                                    answer_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid + '/answer/' + ansId
+                                                }
+                                                sns_params.Message = JSON.stringify(snsMessage);
+                                                // Create promise and SNS service object
+                                                var publishTextPromise = new AWS.SNS({
+                                                    apiVersion: '2010-03-31'
+                                                }).publish(sns_params).promise();
+
+                                                publishTextPromise.then(
+                                                    function (data) {
+                                                        logger.info("Answer posted!");
+                                                        statsDutil.stopTimer(startApiTime, statsDclient, 'create_ans_api_time');
+                                                        res.status(201).send(createdAnswer);
+                                                        logger.info(`Message ${JSON.stringify(sns_params.Message)} sent to the topic ${sns_params.TopicArn}`);
+                                                        logger.info("MessageID is " + data.MessageId);
+
+                                                        //deleted successfully
+                                                        logger.info("Answer Deleted successfully");
+                                                        statsDutil.stopTimer(startApiTime, statsDclient, 'del_ans_api_time');
+                                                        res.status(204).send();                                                                                                                
+
+                                                    }).catch(
+                                                    function (err) {
+                                                        logger.error(err.toString());
+                                                    });
+
+
+                                                // -------------------------------------------------------------------------------------
+
                                             } else {
                                                 //could not delete. maybe question not found
                                                 throw new Error(`Could not delete the Answer with id=${ansId}. The answer was not found`);
