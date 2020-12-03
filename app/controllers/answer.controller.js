@@ -22,7 +22,7 @@ var sns_params = {
     /* required */
     TopicArn: process.env.SNS_ARN
 };
-// TODO: Assignment 9 - send sns only after your own question is answered, own uestion's answer is updated and own question's answer is deleted -- check in ass
+
 exports.postAnswer = (req, res) => {
     startApiTime = Date.now();
     statsDclient.increment('create_answer_counter');
@@ -64,10 +64,13 @@ exports.postAnswer = (req, res) => {
                                                 message: "Answer Posted",
                                                 data: data.dataValues
                                             }
+                                            logger.info(JSON.stringify(ques));
+                                            // -----------------------------------SNS---------------------------------------
                                             let snsMessage = {
                                                 message: 'Answer Created',
                                                 question_id: qid,
-                                                username: user.username,
+                                                username: ques.user_id,
+                                                ans_user: user.id,
                                                 answer_id: createdAnswer.data.answer_id,
                                                 answer_text: createdAnswer.data.answer_text,
                                                 question_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid,
