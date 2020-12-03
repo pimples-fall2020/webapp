@@ -97,7 +97,7 @@ exports.postAnswer = (req, res) => {
                                                         logger.error(err.toString());
                                                     });
                                             }).catch((err) => {
-
+                                                throw err;
                                             });
 
                                         })
@@ -218,41 +218,48 @@ exports.updateAnswer = (req, res) => {
                                                 if (num == 1) {
                                                     //updated successfully
                                                     logger.info("Answer updated successfully!");
-                                                    // --------------SNS---------------------------------------------------------------------
+                                                    getEmailFromId(ques.user_id).then((qUser) => {
 
-                                                    let snsMessage = {
-                                                        message: 'Answer Updated',
-                                                        question_id: qid,
-                                                        username: user.username,
-                                                        answer_id: ansId,
-                                                        answer_text: updateAnswerObj.answer_text,
-                                                        question_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid,
-                                                        answer_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid + '/answer/' + ansId
-                                                    }
-                                                    sns_params.Message = JSON.stringify(snsMessage);
-                                                    // Create promise and SNS service object
-                                                    var publishTextPromise = new AWS.SNS({
-                                                        apiVersion: '2010-03-31'
-                                                    }).publish(sns_params).promise();
+                                                        // --------------SNS---------------------------------------------------------------------
 
-                                                    publishTextPromise.then(
-                                                        function (data) {
-                                                            logger.info("Answer updated");
-                                                            logger.info(`Message ${JSON.stringify(sns_params.Message)} sent to the topic ${sns_params.TopicArn}`);
-                                                            logger.info("MessageID is " + data.MessageId);
+                                                        let snsMessage = {
+                                                            message: 'Answer Updated',
+                                                            question_id: qid,
+                                                            username: qUser.username,
+                                                            ans_user: user.username,
+                                                            answer_id: ansId,
+                                                            answer_text: updateAnswerObj.answer_text,
+                                                            question_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid,
+                                                            answer_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid + '/answer/' + ansId
+                                                        }
+                                                        sns_params.Message = JSON.stringify(snsMessage);
+                                                        // Create promise and SNS service object
+                                                        var publishTextPromise = new AWS.SNS({
+                                                            apiVersion: '2010-03-31'
+                                                        }).publish(sns_params).promise();
 
-                                                            statsDutil.stopTimer(startApiTime, statsDclient, 'update_ans_api_time');
-                                                            res.status(204).send();
+                                                        publishTextPromise.then(
+                                                            function (data) {
+                                                                logger.info("Answer updated");
+                                                                logger.info(`Message ${JSON.stringify(sns_params.Message)} sent to the topic ${sns_params.TopicArn}`);
+                                                                logger.info("MessageID is " + data.MessageId);
 
-
-                                                        }).catch(
-                                                        function (err) {
-                                                            logger.error(err.toString());
-                                                        });
+                                                                statsDutil.stopTimer(startApiTime, statsDclient, 'update_ans_api_time');
+                                                                res.status(204).send();
 
 
-                                                    // -------------------------------------------------------------------------------------
+                                                            }).catch(
+                                                            function (err) {
+                                                                logger.error(err.toString());
+                                                            });
 
+
+                                                        // -------------------------------------------------------------------------------------
+
+
+                                                    }).catch((e) => {
+                                                        throw e;
+                                                    })
 
 
                                                 } else {
@@ -406,40 +413,46 @@ exports.deleteAnswer = (req, res) => {
                                             statsDutil.stopTimer(startDelTime, statsDclient, 'db_destroy_ans_time');
                                             console.log(num);
                                             if (num == 1) {
-                                                // --------------SNS---------------------------------------------------------------------
+                                                getEmailFromId(ques.user_id).then((qUser) => {
+                                                    // --------------SNS---------------------------------------------------------------------
 
-                                                let snsMessage = {
-                                                    message: 'Answer Deleted',
-                                                    question_id: qid,
-                                                    username: user.username,
-                                                    answer_id: ansId,
-                                                    answer_text: ans.answer_text,
-                                                    question_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid,
-                                                    answer_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid + '/answer/' + ansId
-                                                }
-                                                sns_params.Message = JSON.stringify(snsMessage);
-                                                // Create promise and SNS service object
-                                                var publishTextPromise = new AWS.SNS({
-                                                    apiVersion: '2010-03-31'
-                                                }).publish(sns_params).promise();
+                                                    let snsMessage = {
+                                                        message: 'Answer Deleted',
+                                                        question_id: qid,
+                                                        username: qUser.username,
+                                                        ans_user: user.username,
+                                                        answer_id: ansId,
+                                                        answer_text: ans.answer_text,
+                                                        question_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid,
+                                                        answer_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid + '/answer/' + ansId
+                                                    }
+                                                    sns_params.Message = JSON.stringify(snsMessage);
+                                                    // Create promise and SNS service object
+                                                    var publishTextPromise = new AWS.SNS({
+                                                        apiVersion: '2010-03-31'
+                                                    }).publish(sns_params).promise();
 
-                                                publishTextPromise.then(
-                                                    function (data) {
-                                                        logger.info(`Message ${JSON.stringify(sns_params.Message)} sent to the topic ${sns_params.TopicArn}`);
-                                                        logger.info("MessageID is " + data.MessageId);
+                                                    publishTextPromise.then(
+                                                        function (data) {
+                                                            logger.info(`Message ${JSON.stringify(sns_params.Message)} sent to the topic ${sns_params.TopicArn}`);
+                                                            logger.info("MessageID is " + data.MessageId);
 
-                                                        //deleted successfully
-                                                        logger.info("Answer Deleted successfully");
-                                                        statsDutil.stopTimer(startApiTime, statsDclient, 'del_ans_api_time');
-                                                        res.status(204).send();
+                                                            //deleted successfully
+                                                            logger.info("Answer Deleted successfully");
+                                                            statsDutil.stopTimer(startApiTime, statsDclient, 'del_ans_api_time');
+                                                            res.status(204).send();
 
-                                                    }).catch(
-                                                    function (err) {
-                                                        logger.error(err.toString());
-                                                    });
+                                                        }).catch(
+                                                        function (err) {
+                                                            logger.error(err.toString());
+                                                        });
 
 
-                                                // -------------------------------------------------------------------------------------
+                                                    // -------------------------------------------------------------------------------------
+
+                                                }).catch((e) => {
+                                                    throw e;
+                                                });
 
                                             } else {
                                                 //could not delete. maybe question not found
