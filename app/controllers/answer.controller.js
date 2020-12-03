@@ -70,7 +70,7 @@ exports.postAnswer = (req, res) => {
                                                 message: 'Answer Created',
                                                 question_id: qid,
                                                 username: ques.user_id,
-                                                ans_user: user.id,
+                                                ans_user: user.username,
                                                 answer_id: createdAnswer.data.answer_id,
                                                 answer_text: createdAnswer.data.answer_text,
                                                 question_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid,
@@ -417,14 +417,14 @@ exports.deleteAnswer = (req, res) => {
                                                 }).publish(sns_params).promise();
 
                                                 publishTextPromise.then(
-                                                    function (data) {                                                                                                                                                                   
+                                                    function (data) {
                                                         logger.info(`Message ${JSON.stringify(sns_params.Message)} sent to the topic ${sns_params.TopicArn}`);
                                                         logger.info("MessageID is " + data.MessageId);
 
                                                         //deleted successfully
                                                         logger.info("Answer Deleted successfully");
                                                         statsDutil.stopTimer(startApiTime, statsDclient, 'del_ans_api_time');
-                                                        res.status(204).send();                                                                                                                
+                                                        res.status(204).send();
 
                                                     }).catch(
                                                     function (err) {
@@ -600,10 +600,22 @@ async function getQuestionFromId(qid) {
     let ques = await Question.findOne({
         where: {
             question_id: qid
-        }
+        },
+        include: [{
+            model: User,
+            through: {
+                attributes: []
+            }
+        }]
     });
     statsDutil.stopTimer(starttime, statsDclient, 'db_getQuestionFromId_time');
     if (ques != undefined && ques != null) {
+        logger.info("Included User-------------");
+        logger.info(JSON.stringify(ques));
+        logger.info(question.get({
+            plain: true
+        }).user);
+
         return ques.dataValues;
     }
 
