@@ -65,34 +65,41 @@ exports.postAnswer = (req, res) => {
                                                 data: data.dataValues
                                             }
                                             logger.info(JSON.stringify(ques));
-                                            // -----------------------------------SNS---------------------------------------
-                                            let snsMessage = {
-                                                message: 'Answer Created',
-                                                question_id: qid,
-                                                username: ques.user_id,
-                                                ans_user: user.username,
-                                                answer_id: createdAnswer.data.answer_id,
-                                                answer_text: createdAnswer.data.answer_text,
-                                                question_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid,
-                                                answer_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid + '/answer/' + createdAnswer.data.answer_id
-                                            }
-                                            sns_params.Message = JSON.stringify(snsMessage);
-                                            // Create promise and SNS service object
-                                            var publishTextPromise = new AWS.SNS({
-                                                apiVersion: '2010-03-31'
-                                            }).publish(sns_params).promise();
 
-                                            publishTextPromise.then(
-                                                function (data) {
-                                                    logger.info("Answer posted!");
-                                                    statsDutil.stopTimer(startApiTime, statsDclient, 'create_ans_api_time');
-                                                    res.status(201).send(createdAnswer);
-                                                    logger.info(`Message ${JSON.stringify(sns_params.Message)} sent to the topic ${sns_params.TopicArn}`);
-                                                    logger.info("MessageID is " + data.MessageId);
-                                                }).catch(
-                                                function (err) {
-                                                    logger.error(err.toString());
-                                                });
+                                            getEmailFromId(ques.user_id).then((qUser) => {
+
+                                                // -----------------------------------SNS---------------------------------------
+                                                let snsMessage = {
+                                                    message: 'Answer Created',
+                                                    question_id: qid,
+                                                    username: qUser.username,
+                                                    ans_user: user.username,
+                                                    answer_id: createdAnswer.data.answer_id,
+                                                    answer_text: createdAnswer.data.answer_text,
+                                                    question_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid,
+                                                    answer_link: 'www.api.' + webapp_env + '.sanketpimple.me/v1/question/' + qid + '/answer/' + createdAnswer.data.answer_id
+                                                }
+                                                sns_params.Message = JSON.stringify(snsMessage);
+                                                // Create promise and SNS service object
+                                                var publishTextPromise = new AWS.SNS({
+                                                    apiVersion: '2010-03-31'
+                                                }).publish(sns_params).promise();
+
+                                                publishTextPromise.then(
+                                                    function (data) {
+                                                        logger.info("Answer posted!");
+                                                        statsDutil.stopTimer(startApiTime, statsDclient, 'create_ans_api_time');
+                                                        res.status(201).send(createdAnswer);
+                                                        logger.info(`Message ${JSON.stringify(sns_params.Message)} sent to the topic ${sns_params.TopicArn}`);
+                                                        logger.info("MessageID is " + data.MessageId);
+                                                    }).catch(
+                                                    function (err) {
+                                                        logger.error(err.toString());
+                                                    });
+                                            }).catch((err) => {
+
+                                            });
+
                                         })
                                         .catch(err => {
                                             logger.error(err.toString());
@@ -600,23 +607,25 @@ async function getQuestionFromId(qid) {
     let ques = await Question.findOne({
         where: {
             question_id: qid
-        },
-        include: [{
-            model: User,
-            through: {
-                attributes: []
-            }
-        }]
+        }
     });
     statsDutil.stopTimer(starttime, statsDclient, 'db_getQuestionFromId_time');
     if (ques != undefined && ques != null) {
-        logger.info("Included User-------------");
-        logger.info(JSON.stringify(ques));
-        logger.info(question.get({
-            plain: true
-        }).user);
-
         return ques.dataValues;
+    }
+
+}
+
+async function getEmailFromId(userid) {
+    // let starttime = Date.now();
+    let user = await User.findOne({
+        where: {
+            id: userid
+        }
+    });
+    // statsDutil.stopTimer(starttime, statsDclient, 'db_getQuestionFromId_time');
+    if (user != undefined && user != null) {
+        return user.dataValues;
     }
 
 }
