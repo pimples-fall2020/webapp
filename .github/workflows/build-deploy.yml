@@ -10,8 +10,9 @@ env:
   AWS_REGION: ${{secrets.AWS_REGION}}
 
 on:
-  push:
-    branches: [master]
+  workflow_dispatch:
+  # push:
+    # branches: [master]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
