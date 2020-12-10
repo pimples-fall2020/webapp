@@ -22,7 +22,7 @@ var sns_params = {
     /* required */
     TopicArn: process.env.SNS_ARN
 };
-// TODO: Assignment 10: remove www.api in links for SNS payload
+
 exports.postAnswer = (req, res) => {
     startApiTime = Date.now();
     statsDclient.increment('create_answer_counter');
@@ -76,8 +76,8 @@ exports.postAnswer = (req, res) => {
                                                     ans_user: user.username,
                                                     answer_id: createdAnswer.data.answer_id,
                                                     answer_text: createdAnswer.data.answer_text,
-                                                    question_link:  webapp_env + '.sanketpimple.me/v1/question/' + qid,
-                                                    answer_link: webapp_env + '.sanketpimple.me/v1/question/' + qid + '/answer/' + createdAnswer.data.answer_id
+                                                    question_link:  'https://'+webapp_env + '.sanketpimple.me/v1/question/' + qid,
+                                                    answer_link: 'https://'+webapp_env + '.sanketpimple.me/v1/question/' + qid + '/answer/' + createdAnswer.data.answer_id
                                                 }
                                                 sns_params.Message = JSON.stringify(snsMessage);
                                                 // Create promise and SNS service object
@@ -229,8 +229,8 @@ exports.updateAnswer = (req, res) => {
                                                             ans_user: user.username,
                                                             answer_id: ansId,
                                                             answer_text: updateAnswerObj.answer_text,
-                                                            question_link: webapp_env + '.sanketpimple.me/v1/question/' + qid,
-                                                            answer_link: webapp_env + '.sanketpimple.me/v1/question/' + qid + '/answer/' + ansId
+                                                            question_link: 'https://'+webapp_env + '.sanketpimple.me/v1/question/' + qid,
+                                                            answer_link: 'https://'+webapp_env + '.sanketpimple.me/v1/question/' + qid + '/answer/' + ansId
                                                         }
                                                         sns_params.Message = JSON.stringify(snsMessage);
                                                         // Create promise and SNS service object
@@ -423,8 +423,8 @@ exports.deleteAnswer = (req, res) => {
                                                         ans_user: user.username,
                                                         answer_id: ansId,
                                                         answer_text: ans.answer_text,
-                                                        question_link: webapp_env + '.sanketpimple.me/v1/question/' + qid,
-                                                        answer_link: webapp_env + '.sanketpimple.me/v1/question/' + qid + '/answer/' + ansId
+                                                        question_link: 'https://'+webapp_env + '.sanketpimple.me/v1/question/' + qid,
+                                                        answer_link: 'https://'+webapp_env + '.sanketpimple.me/v1/question/' + qid + '/answer/' + ansId
                                                     }
                                                     sns_params.Message = JSON.stringify(snsMessage);
                                                     // Create promise and SNS service object
