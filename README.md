@@ -59,7 +59,13 @@ OR `npm run start-dev` for development environment
          - `password`
 
 PS: This project has been setup with AWS for storage, DB and CI/CD
-CloudWatch demo
+
+AWS CLI Command for Importing SSL Certificate
+```
+$ aws acm import-certificate --certificate fileb://Certificate.pem \
+      --certificate-chain fileb://CertificateChain.pem \
+      --private-key fileb://PrivateKey.pem 	
+```
 ---
 ## Thank you!
 *Sanket Pimple (pimple.s@northeastern.edu)*
