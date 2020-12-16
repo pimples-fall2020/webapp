@@ -12,10 +12,10 @@
       idle: 10000
     },
     dialectOptions: {
-      ssl: {
-        ssl: 'Amazon RDS',
-        rejectUnauthorized: true
-        // ca: [rdsCa]
-      }
+
+      ssl: 'Amazon RDS',
+      rejectUnauthorized: true
+      // ca: [rdsCa]
+
     }
   };
